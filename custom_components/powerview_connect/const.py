@@ -1,4 +1,4 @@
-"""Constants for the PowerView Gen 3 integration."""
+"""Constants for the PowerView Connect integration."""
 
 from typing import Final
 

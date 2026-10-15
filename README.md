@@ -1,4 +1,4 @@
-# PowerView Gen 3 (unofficial) for Home Assistant
+# PowerView Connect for Home Assistant
 
 A Home Assistant integration for **Hunter Douglas / Luxaflex PowerView Gen 3** gateways, over
 their local HTTP API and event stream on your own network - no cloud. Built on
@@ -56,7 +56,7 @@ other. Here every command sends only its own rail, and the gateway leaves the ot
 1. Select the button to open this repository in [HACS](https://hacs.xyz). Or add it yourself: in
    HACS, the three dots > **Custom repositories**, the repository
    `https://github.com/HairingX/ha_powerview_connect` and the type **Integration**.
-2. Download **PowerView Gen 3 (unofficial)**.
+2. Download **PowerView Connect**.
 3. Restart Home Assistant.
 
 HACS offers the releases; a pre-release only with **Show beta versions** switched on for the
@@ -84,12 +84,12 @@ itself.
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=powerview_connect)
 
 Select the button, or go to Settings > Devices & services > Add integration >
-**PowerView Gen 3 (unofficial)**, and enter the **primary** gateway's IP address or host name.
+**PowerView Connect**, and enter the **primary** gateway's IP address or host name.
 An auxiliary gateway is refused, with the primary gateway's address.
 
 The home is recognised by the primary gateway's **serial number**, not its address. When the
 gateway gets a new address, **reconfigure** the entry (Settings > Devices & services >
-PowerView Gen 3 (unofficial) > the three dots > Reconfigure) and enter it; every device, entity
+PowerView Connect > the three dots > Reconfigure) and enter it; every device, entity
 and its history stays. Reconfigure refuses another home's gateway.
 
 **Options** (the entry's **Configure**):
@@ -264,7 +264,7 @@ The two can run side by side; both are offered when a Gen 3 gateway is discovere
 
 ## Removing the integration
 
-Settings > Devices & services > PowerView Gen 3 (unofficial) > the three dots > Delete. Uninstall
+Settings > Devices & services > PowerView Connect > the three dots > Delete. Uninstall
 it in HACS, or delete `custom_components/powerview_connect`, and restart Home Assistant.
 
 A shade removed from the home in the PowerView app is removed by itself at the next read of the

@@ -12,8 +12,8 @@ body:
   - type: input
     id: integration_version
     attributes:
-      label: Version of PowerView Gen 3
-      description: Settings > Devices & services > PowerView Gen 3 (unofficial).
+      label: Version of PowerView Connect
+      description: Settings > Devices & services > PowerView Connect.
     validations:
       required: true
   - type: input
@@ -28,7 +28,7 @@ body:
     attributes:
       label: Diagnostics
       description: >-
-        Settings > Devices & services > PowerView Gen 3 (unofficial) > the three dots > Download
+        Settings > Devices & services > PowerView Connect > the three dots > Download
         diagnostics. Attach the file here. It holds every shade's type, positions and motion
         state, without the gateway's address or any serial number.
     validations:
@@ -38,7 +38,7 @@ body:
     attributes:
       label: Debug log
       description: >-
-        Settings > Devices & services > PowerView Gen 3 (unofficial) > Enable debug logging, reproduce
+        Settings > Devices & services > PowerView Connect > Enable debug logging, reproduce
         the problem, then Disable debug logging; the log is downloaded. Attach it here, or paste
         the lines about the problem.
       render: text

@@ -3,7 +3,7 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Set up PowerView Gen 3",
+        "title": "Set up PowerView Connect",
         "description": "Enter the address of the primary PowerView Gen 3 gateway: the one that is not an auxiliary gateway. It serves every shade of the home.",
         "data": {
           "host": "Host"

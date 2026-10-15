@@ -8,7 +8,7 @@
     ],
     "portsAttributes": {
         "8123": {
-            "label": "Home Assistant - PowerView Gen 3",
+            "label": "Home Assistant - PowerView Connect",
             "onAutoForward": "notify"
         }
     },

@@ -1,4 +1,4 @@
-"""The PowerView Gen 3 integration: Hunter Douglas / Luxaflex shades through a Gen 3 gateway."""
+"""The PowerView Connect integration: Hunter Douglas / Luxaflex shades through a Gen 3 gateway."""
 
 from __future__ import annotations
 

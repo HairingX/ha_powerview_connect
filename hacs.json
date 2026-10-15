@@ -1,5 +1,5 @@
 {
-  "name": "PowerView Gen 3 (unofficial)",
+  "name": "PowerView Connect",
   "homeassistant": "2026.10.1",
   "zip_release": true,
   "filename": "powerview_connect.zip"
