@@ -9,7 +9,7 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/HairingX/ha_powerview_connect/issues",
   "loggers": ["powerview_connect"],
-  "requirements": ["powerview_connect==0.1.0"],
+  "requirements": ["powerview_connect==0.1.0rc1"],
   "version": "0.0.0",
   "zeroconf": ["_PowerView-G3._tcp.local."]
 }
