@@ -33,6 +33,31 @@
         "require_last_push_approval": false,
         "required_review_thread_resolution": false
       }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Tests and type check",
+            "integration_id": 15368
+          },
+          {
+            "context": "Hassfest",
+            "integration_id": 15368
+          },
+          {
+            "context": "HACS",
+            "integration_id": 15368
+          },
+          {
+            "context": "Libraries released and pinned",
+            "integration_id": 15368
+          }
+        ]
+      }
     }
   ]
 }
