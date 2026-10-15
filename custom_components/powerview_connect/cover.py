@@ -24,7 +24,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from powerview_connect import Capabilities, Rail, Shade
 
 from .const import DOMAIN
-from .entity import PowerViewShadeEntity
+from .entity import PowerViewShadeEntity, add_entities
 from .hub import PowerViewConfigEntry, PowerViewHub
 
 PARALLEL_UPDATES = 0
@@ -87,8 +87,8 @@ async def async_setup_entry(
 ) -> None:
     """Add the covers of each shade."""
     hub = entry.runtime_data
-    async_add_entities(
-        cover for shade in hub.home.shades.values() for cover in covers_of(hub, shade))
+    add_entities(hub, async_add_entities, [
+        cover for shade in hub.home.shades.values() for cover in covers_of(hub, shade)])
 
 
 class PowerViewCover(PowerViewShadeEntity, CoverEntity):

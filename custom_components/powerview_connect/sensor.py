@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from powerview_connect import BatteryStatus, Shade
 
-from .entity import PowerViewShadeEntity, has_battery
+from .entity import PowerViewShadeEntity, add_entities, has_battery
 from .hub import PowerViewConfigEntry, PowerViewHub
 
 PARALLEL_UPDATES = 0
@@ -34,7 +34,7 @@ async def async_setup_entry(
     sensors += [
         PowerViewBatteryLevel(hub, shade) for shade in hub.home.shades.values() if has_battery(shade)
     ]
-    async_add_entities(sensors)
+    add_entities(hub, async_add_entities, sensors)
 
 
 class PowerViewSignalStrength(PowerViewShadeEntity, SensorEntity):

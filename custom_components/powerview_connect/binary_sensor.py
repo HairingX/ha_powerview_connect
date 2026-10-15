@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from powerview_connect import BatteryStatus, Shade
 
-from .entity import PowerViewShadeEntity, has_battery
+from .entity import PowerViewShadeEntity, add_entities, has_battery
 from .hub import PowerViewConfigEntry, PowerViewHub
 
 PARALLEL_UPDATES = 0
@@ -21,9 +21,9 @@ async def async_setup_entry(
 ) -> None:
     """Add a low battery sensor for each shade not on mains power."""
     hub = entry.runtime_data
-    async_add_entities(
+    add_entities(hub, async_add_entities, [
         PowerViewLowBattery(hub, shade) for shade in hub.home.shades.values() if has_battery(shade)
-    )
+    ])
 
 
 class PowerViewLowBattery(PowerViewShadeEntity, BinarySensorEntity):

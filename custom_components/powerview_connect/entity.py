@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from powerview_connect import Shade, ShadeTracker
 
 from .const import DOMAIN, MANUFACTURER
@@ -51,6 +54,16 @@ def shade_device(hub: PowerViewHub, shade: Shade) -> DeviceInfo:
         suggested_area=shade.room_name,
         via_device_id=hub.gateway_device_id,
     )
+
+
+def add_entities(
+    hub: PowerViewHub, async_add_entities: AddConfigEntryEntitiesCallback,
+    entities: Iterable[Entity],
+) -> None:
+    """Add `entities`, noting their unique ids as ones the entry still has."""
+    made = list(entities)
+    hub.unique_ids.update(entity.unique_id for entity in made if entity.unique_id)
+    async_add_entities(made)
 
 
 def has_battery(shade: Shade) -> bool:
