@@ -23,14 +23,20 @@ other. Here every command sends only its own rail, and the gateway leaves the ot
   firmware 3.2.59.
 - Through it, every shade of the home:
 
-  | Shade | Covers |
+  | Shade (Gen 3 capabilities) | Covers |
   |---|---|
-  | Top-down/bottom-up (such as Duette TDBU) | *Top* and *Bottom*, one per rail |
-  | Bottom-up, and every kind not listed here | one, its rail |
-  | Top-down | one, its rail, 100 when lowered fully |
-  | Tilt-only | one, its vanes |
+  | Top-down/bottom-up (7, such as Duette TDBU) | *Top* and *Bottom*, one per rail |
+  | Bottom-up (0) | one, its rail |
+  | Bottom-up with tilt, 90° or 180° (1, 2) | one, its rail, with the vanes as its tilt |
+  | Vertical (3), with tilt (4) | one curtain, its rail, with the vanes as its tilt where it has them |
+  | Tilt-only (5) | one, its vanes as its tilt |
+  | Top-down (6) | one, its rail, 100 when lowered fully |
+  | Dual-overlapped (8), with tilt (9, 10) | *Front* and *Rear*, one per fabric, the vanes as the front's tilt where it has them |
+  | Any other | one, its primary rail |
 
-  Run against a hard-wired Duette top-down/bottom-up shade (shade firmware 3.0.433).
+  Run against a hard-wired Duette top-down/bottom-up shade (shade firmware 3.0.433). The other
+  kinds follow Hunter Douglas's Gen 3 API description and have not been run against a real
+  shade yet.
 - Not supported: PowerView Gen 1 and Gen 2 hubs, which have another API; Home Assistant's own
   PowerView integration serves them.
 
@@ -227,9 +233,10 @@ automation:
 
 - Shades on auxiliary gateways are listed by the primary gateway and set up with it, but have
   not been followed live yet.
-- Tilting, dual-overlapped and battery-powered shades have not been run against a real shade.
-  A shade that tilts as well as moves gets a cover for its rail only; a dual-overlapped shade a
-  cover for its primary rail only.
+- Only the Duette top-down/bottom-up shade has been run against a real gateway. Tilting,
+  vertical, dual-overlapped and battery-powered shades follow the Gen 3 API description: which
+  fabric is front and which rear, and how far a 90° shade's vanes tilt, are as it describes them.
+  If one behaves otherwise, please report it with the shade's `GET /home/shades/{id}`.
 - Stop stops both rails of a top-down/bottom-up shade: the gateway stops a whole shade.
 - The battery levels are those the Gen 3 API describes; they have not been read from a battery
   shade yet. The gateway reports steps, not a percentage.

@@ -12,6 +12,18 @@
         "state": {
           "closed": "mdi:roller-shade-closed"
         }
+      },
+      "front": {
+        "default": "mdi:roller-shade",
+        "state": {
+          "closed": "mdi:roller-shade-closed"
+        }
+      },
+      "rear": {
+        "default": "mdi:roller-shade",
+        "state": {
+          "closed": "mdi:roller-shade-closed"
+        }
       }
     },
     "sensor": {

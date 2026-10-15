@@ -76,6 +76,22 @@
             "name": "Target position"
           }
         }
+      },
+      "front": {
+        "name": "Front",
+        "state_attributes": {
+          "target_position": {
+            "name": "Target position"
+          }
+        }
+      },
+      "rear": {
+        "name": "Rear",
+        "state_attributes": {
+          "target_position": {
+            "name": "Target position"
+          }
+        }
       }
     },
     "sensor": {
