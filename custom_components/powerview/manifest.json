@@ -1,0 +1,15 @@
+{
+  "domain": "powerview",
+  "name": "PowerView Gen 3 (unofficial)",
+  "codeowners": [
+    "@HairingX"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/HairingX/ha_powerview",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/HairingX/ha_powerview/issues",
+  "requirements": [],
+  "version": "0.0.0"
+}

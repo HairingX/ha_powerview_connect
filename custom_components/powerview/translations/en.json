@@ -1,0 +1,55 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "PowerView Gen 3 gateway",
+        "description": "Enter the IP address of the primary PowerView Gen 3 gateway (the one that is not an auxiliary gateway).",
+        "data": { "host": "Host" },
+        "data_description": { "host": "IP address or hostname, e.g. 192.0.2.32" }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach a PowerView Gen 3 gateway at this address.",
+      "not_primary": "This is an auxiliary gateway. Use the primary gateway instead ({primary}).",
+      "no_shades": "The gateway reports no shades."
+    },
+    "abort": {
+      "already_configured": "This PowerView home is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "PowerView options",
+        "data": {
+          "motion_poll_interval": "Poll interval while a shade moves (seconds)",
+          "refresh_minutes": "Full refresh interval (minutes)"
+        },
+        "data_description": {
+          "motion_poll_interval": "Live position updates while moving. Shades that stand still are never polled.",
+          "refresh_minutes": "Safety-net refresh of all shades in case an event was missed."
+        }
+      }
+    }
+  },
+  "entity": {
+    "cover": {
+      "top": { "name": "Top" },
+      "bottom": { "name": "Bottom" }
+    }
+  },
+  "exceptions": {
+    "not_tdbu": { "message": "{entity_id} is not a top-down/bottom-up shade." },
+    "no_position": { "message": "Give a top and/or bottom position." }
+  },
+  "services": {
+    "set_positions": {
+      "name": "Set positions",
+      "description": "Move the top and/or bottom rail of a top-down/bottom-up shade in one request. Rails that are not given stay where they are.",
+      "fields": {
+        "top": { "name": "Top", "description": "Top rail position (0 = top rail at the top, 100 = fully down)." },
+        "bottom": { "name": "Bottom", "description": "Bottom rail position (0 = fully down, 100 = fully up)." }
+      }
+    }
+  }
+}
