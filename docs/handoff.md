@@ -71,13 +71,17 @@ polling and SSE for them were not tested); tilt / dual-overlapped / tilt-only ty
      above. No Home Assistant imports; aiohttp is its only runtime dependency.
    - **Names:** repository, distribution and import name are all `powerview_connect`, like
      `wavin_sentio_connect`. (The PyPI name `powerview` is taken by an unrelated Active Directory
-     tool; whether `powerview_connect` is free on PyPI could not be checked from the earlier
-     session - check before the first release, as PyPI names cannot be renamed.)
+     tool. The owner has reserved `powerview-connect` with a pending trusted publisher.)
    - pyright strict, 100 % coverage, tests of the client against `testing.py`, the captured data
      in `tests/test_engine.py` as fixtures, a live test reading a gateway given by an environment
      variable (read-only: GET /home and the SSE stream; it must never move a shade).
-   - Release to PyPI with trusted publishing; the owner has to add the trusted publisher on
-     PyPI for the release workflow.
+   - Release to PyPI with trusted publishing, exactly as `wavin_sentio_connect` does. The owner
+     has registered a pending trusted publisher on PyPI for the project `powerview-connect`
+     (PyPI normalises it to the same name as `powerview_connect`). It is bound to repository
+     `HairingX/powerview_connect`, workflow file `.github/workflows/release.yml` and environment
+     `pypi`, so keep exactly that file name and `environment: name: pypi` with
+     `permissions: id-token: write` on the publish job. Ask the owner to confirm those three
+     values on PyPI if the first publish is refused.
    - Then in this repository: depend on it in `manifest.json` `requirements` and
      `requirements-test.txt`, set `LIBRARIES` in `.github/scripts/test_build.py` (the repository and distribution
      name are both `powerview_connect`), copy the template's `library-released` workflow, and add the
