@@ -47,7 +47,7 @@ polling and SSE for them were not tested); tilt / dual-overlapped / tilt-only ty
   `test_build.py` has `LIBRARIES = ()` (no external library yet); the `library-released`
   workflow was not copied.
 - `custom_components/powerview/` — a first, **never-run-under-Home-Assistant** draft:
-  - Pure, HA-free protocol code: `model.py` (parsing `/home`, shades, scenes, SSE lines, command
+  - Pure, HA-free protocol code, to move to the library repository: `model.py` (parsing `/home`, shades, scenes, SSE lines, command
     errors), `api.py` (aiohttp client: get_home, get_shade, set_positions single-rail, stop,
     activate_scene, iter_shade_events with a `STREAM_OPENED` pseudo-event and idle timeout),
     `motion.py` (`ShadeTracker` state machine: motion_started/stopped, command, poll,
@@ -61,14 +61,30 @@ polling and SSE for them were not tested); tilt / dual-overlapped / tilt-only ty
 
 ## What is left (in order)
 
-1. **Move the protocol code into a subpackage** `custom_components/powerview/gen3/`
-   (`model.py`, `api.py`, `motion.py`, plus `testing.py`: a simulated gateway — aiohttp web app
-   serving `/home`, `/home/shades/{id}`, PUT positions/stop/scene activate, and the SSE stream
-   from per-subscriber queues, with test controls to emit events, set intermediate positions,
-   finish motion, drop streams, go offline). No Home Assistant imports in `gen3/`; add a contract
-   test that enforces it. It is the future library `powerview_gen3` (separate repo + PyPI, like
-   `wavin_sentio_connect`) — that split needs the owner to create the repo and a PyPI trusted
-   publisher.
+1. **Library repository `HairingX/powerview`** (created by the owner; holds only a LICENSE).
+   Build it like `HairingX/wavin_sentio_connect` (public; read its CLAUDE.md, pyproject.toml,
+   src/ layout, py.typed, tests, release and PyPI workflows):
+   - Move `model.py`, `api.py` and `motion.py` there, plus `testing.py`: a simulated gateway — an
+     aiohttp web app serving `/home`, `/home/shades/{id}`, PUT positions/stop/scene activate and
+     the SSE stream from per-subscriber queues, with test controls to emit events, set
+     intermediate positions, finish motion, drop streams and go offline, behaving as the table
+     above. No Home Assistant imports; aiohttp is its only runtime dependency.
+   - **Names:** the PyPI name `powerview` is taken (an unrelated Active Directory tool, checked
+     2026-10-15), so the distribution and import name must differ; proposed: distribution
+     `powerview-gen3`, import `powerview_gen3`, repository name unchanged. Confirm with the
+     owner before the first release, as PyPI names cannot be renamed.
+   - pyright strict, 100 % coverage, tests of the client against `testing.py`, the captured data
+     in `tests/test_engine.py` as fixtures, a live test reading a gateway given by an environment
+     variable (read-only: GET /home and the SSE stream; it must never move a shade).
+   - Release to PyPI with trusted publishing; the owner has to add the trusted publisher on
+     PyPI for the release workflow.
+   - Then in this repository: depend on it in `manifest.json` `requirements` and
+     `requirements-test.txt`, set `LIBRARIES` in `.github/scripts/test_build.py` (it uses the
+     repository name for the branch archive and the distribution name for the requirement —
+     adapt it, as the two differ), copy the template's `library-released` workflow, and add the
+     template's contract tests for the pin and for importing the library from its package.
+   Until the library is released, keep developing both together with a branch of the same name
+   in each repository, as the template's CI supports.
 2. **Make it match the template's standard** (read the template's CLAUDE.md, it is the spec):
    - pyright strict 0 errors: use `_attr_` values set in an update method instead of overriding
      entity properties; `cast` JSON objects; no `type: ignore`.
@@ -94,8 +110,8 @@ polling and SSE for them were not tested); tilt / dual-overlapped / tilt-only ty
    already configured, zeroconf, reconfigure, options), setup/unload, covers (state, opening/
    closing from SSE, live polling, single-rail payloads, set_positions, stop, firmware clamp),
    scenes, availability (gateway down/up, SSE reconnect + refresh), diagnostics, contract tests
-   (translations parity, quality scale, hacs.json = tested HA version, icons, no HA in gen3,
-   no real IPs). A `live` test that only reads `/home` and the SSE stream of a gateway given by
+   (translations parity, quality scale, hacs.json = tested HA version, icons, library pin,
+   no real IPs). The integration's tests use the library's `testing.py` simulated gateway. A `live` test that only reads `/home` and the SSE stream of a gateway given by
    an environment variable, skipped otherwise. Delete `tests/test_engine.py` once its cases live
    in pytest.
 4. `README.md` (template's sections: what it is for, supported devices, requirements, install

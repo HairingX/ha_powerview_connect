@@ -1,9 +1,9 @@
 # Conventions for this repository
 
 A Home Assistant integration, installed through HACS, for Hunter Douglas / Luxaflex PowerView
-Gen 3 gateways over their local HTTP API and event stream. The gateway protocol lives in the
-`gen3` package, which imports nothing from Home Assistant, so it can become a library of its own;
-the rest of the integration turns it into Home Assistant devices and entities. How and why it is
+Gen 3 gateways over their local HTTP API and event stream. The gateway itself is modelled by the
+library from `HairingX/powerview`; this repository only turns it into Home Assistant devices and
+entities. How and why it is
 built as it is: `docs/design.md`. Work in progress: `docs/handoff.md` says what is left.
 
 ## Comments and docstrings
@@ -42,9 +42,9 @@ obvious from the name - one or two lines, no narrative.
   No `# type: ignore` and no rule turned off: where Home Assistant's own types force a choice,
   take the typed route (`_attr_` values rather than overridden properties).
 - Every problem found gets a test that fails without the fix.
-- The tests run the real client against the simulated gateway (`gen3.testing`), an HTTP server
-  on 127.0.0.1 that behaves as a real Gen 3 gateway was measured to; they never reach a real
-  gateway.
+- The tests run the real client against the library's simulated gateway (its `testing`
+  module), an HTTP server on 127.0.0.1 that behaves as a real Gen 3 gateway was measured to; they
+  never reach a real gateway.
 - Test tools and Home Assistant are pinned in `requirements-test.txt`:
   `pip install -r requirements-test.txt`. They need Python 3.14, as the pinned Home Assistant
   does, on Linux or WSL.
