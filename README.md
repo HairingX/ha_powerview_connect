@@ -104,6 +104,10 @@ and its history stays. Reconfigure refuses another home's gateway.
   - the attribute `target_position`, where it is heading while it moves;
   - open, close, set position and stop. Stop stops the whole shade, as the gateway does.
 
+  and a **Signal strength** sensor: how well the gateway hears the shade, in dBm, closer to 0
+  being stronger. It is a diagnostic, disabled by default: enable it on the shade's device. It is
+  read with the whole home, and while the shade moves.
+
 A top-down/bottom-up shade's covers mean what they do in Home Assistant's own PowerView
 integration:
 
@@ -223,6 +227,8 @@ automation:
   A shade that tilts as well as moves gets a cover for its rail only; a dual-overlapped shade a
   cover for its primary rail only.
 - Stop stops both rails of a top-down/bottom-up shade: the gateway stops a whole shade.
+- No battery sensor yet: a hard-wired shade reports the same battery number as a full battery
+  would, and what a battery shade reports has not been read from one.
 - The gateway's estimate of how long a move takes is about half the real time, so it is not
   used.
 - Scenes are activated, not edited: create and change them in the PowerView app.

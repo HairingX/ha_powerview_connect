@@ -45,7 +45,7 @@ def furnish(gateway: SimulatedGateway) -> None:
     gateway.add_shade(TOP_DOWN, "Skylight", room_id=66, capabilities=Capabilities.TOP_DOWN,
                       positions={P: 0.25})
     gateway.add_shade(TILT_ONLY, "Blind", room_id=66, capabilities=Capabilities.TILT_ONLY_180,
-                      positions={T: 0.5})
+                      positions={T: 0.5}, signal_strength=None)
     gateway.add_scene(SCENE, "Morning", room_id=65, members={TDBU: {P: 0.0, S: 0.0}})
 
 
@@ -113,6 +113,15 @@ async def gateway(socket_enabled: None) -> AsyncIterator[SimulatedGateway]:
     furnish(simulated)
     async with simulated:
         yield simulated
+
+
+@pytest.fixture
+def every_entity_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every entity is enabled when it is first added, those disabled by default too."""
+    monkeypatch.setattr(
+        "homeassistant.helpers.entity.Entity.entity_registry_enabled_default",
+        property(lambda _: True),
+    )
 
 
 @pytest.fixture

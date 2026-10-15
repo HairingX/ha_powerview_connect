@@ -56,7 +56,10 @@ async def test_the_gateway_and_each_shade_are_devices(
     entities = er.async_entries_for_config_entry(er.async_get(hass), loaded.entry.entry_id)
     assert sorted(entity.entity_id for entity in entities) == [
         "cover.bedroom_blind", "cover.bedroom_skylight", "cover.living_room_kitchen_window_bottom",
-        "cover.living_room_kitchen_window_top", "cover.living_room_patio_door", "scene.simulated_gateway_morning",
+        "cover.living_room_kitchen_window_top", "cover.living_room_patio_door",
+        "scene.simulated_gateway_morning", "sensor.bedroom_skylight_signal_strength",
+        "sensor.living_room_kitchen_window_signal_strength",
+        "sensor.living_room_patio_door_signal_strength",
     ]
 
 

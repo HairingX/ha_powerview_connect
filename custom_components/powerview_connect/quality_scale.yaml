@@ -72,12 +72,12 @@ rules:
     status: done
     comment: When the home's shades or scenes change, the next read of the home reloads the entry to add them.
   entity-category:
-    status: exempt
-    comment: Every entity is a primary entity of its device.
+    status: done
+    comment: A shade's signal strength is a diagnostic; covers and scenes are primary entities.
   entity-device-class: done
   entity-disabled-by-default:
-    status: exempt
-    comment: Every entity is one a user moves or activates.
+    status: done
+    comment: A shade's signal strength is disabled by default.
   entity-translations: done
   exception-translations: done
   icon-translations: done
