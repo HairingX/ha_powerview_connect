@@ -104,6 +104,11 @@
           "plugged_in": "Tilsluttet strøm"
         }
       }
+    },
+    "button": {
+      "favorite": {
+        "name": "Favoritposition"
+      }
     }
   },
   "exceptions": {
