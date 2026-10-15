@@ -1,0 +1,20 @@
+set_positions:
+  target:
+    entity:
+      integration: powerview
+      domain: cover
+  fields:
+    top:
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+          mode: slider
+    bottom:
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+          mode: slider

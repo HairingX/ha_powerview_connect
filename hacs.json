@@ -1,0 +1,6 @@
+{
+  "name": "PowerView Gen 3 (unofficial)",
+  "homeassistant": "2026.10.0",
+  "zip_release": true,
+  "filename": "powerview.zip"
+}

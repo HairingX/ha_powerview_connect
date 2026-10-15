@@ -1,0 +1,112 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Opsæt PowerView Gen 3",
+        "description": "Angiv adressen på den primære PowerView Gen 3-gateway: den, der ikke er en ekstra gateway. Den betjener alle hjemmets gardiner.",
+        "data": {
+          "host": "Vært"
+        },
+        "data_description": {
+          "host": "IP-adressen eller værtsnavnet på den primære gateway."
+        }
+      },
+      "discovery_confirm": {
+        "title": "PowerView Gen 3-gateway fundet",
+        "description": "Tilføj PowerView-hjemmet for {name} på {host}?"
+      },
+      "reconfigure": {
+        "title": "Skift gatewayens adresse",
+        "description": "Skift, hvor den primære gateway nås. Det skal være samme hjems gateway.",
+        "data": {
+          "host": "Vært"
+        },
+        "data_description": {
+          "host": "IP-adressen eller værtsnavnet på den primære gateway."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Ingen PowerView Gen 3-gateway svarer på denne adresse.",
+      "invalid_host": "Angiv en vært.",
+      "not_primary": "Dette er en ekstra gateway. Angiv den primære gateway i stedet ({primary}).",
+      "no_shades": "Gatewayen melder ingen gardiner."
+    },
+    "abort": {
+      "already_configured": "Dette PowerView-hjem er allerede sat op.",
+      "already_in_progress": "Dette PowerView-hjem er allerede ved at blive sat op.",
+      "cannot_connect": "Ingen PowerView Gen 3-gateway svarer på den fundne adresse.",
+      "invalid_host": "Gatewayen meldte ingen adresse.",
+      "not_primary": "Den fundne gateway er en ekstra gateway; den primære gateway betjener hjemmet.",
+      "no_shades": "Gatewayen melder ingen gardiner.",
+      "reconfigure_successful": "Gatewayens adresse blev ændret.",
+      "wrong_gateway": "Gatewayen på denne adresse hører til et andet PowerView-hjem. Tilføj den som et nyt hjem i stedet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "PowerView-indstillinger",
+        "data": {
+          "motion_poll_interval": "Læs et gardin i bevægelse hvert (sekunder)",
+          "refresh_minutes": "Læs hele hjemmet hvert (minutter)"
+        },
+        "data_description": {
+          "motion_poll_interval": "Hvor ofte et gardin i bevægelse får sin position læst. Et gardin, der står stille, læses aldrig.",
+          "refresh_minutes": "Hvor ofte alle gardiner læses, i tilfælde af at en hændelse fra gatewayen gik tabt."
+        }
+      }
+    }
+  },
+  "entity": {
+    "cover": {
+      "top": {
+        "name": "Top",
+        "state_attributes": {
+          "target_position": {
+            "name": "Målposition"
+          }
+        }
+      },
+      "bottom": {
+        "name": "Bund",
+        "state_attributes": {
+          "target_position": {
+            "name": "Målposition"
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "cannot_connect": {
+      "message": "PowerView-gatewayen på {host} svarer ikke."
+    },
+    "command_failed": {
+      "message": "PowerView-gatewayen tog ikke imod kommandoen: {error}"
+    },
+    "not_top_down_bottom_up": {
+      "message": "{entity_id} er ikke et top-down/bottom-up-gardin."
+    },
+    "no_position": {
+      "message": "Angiv en top- eller bundposition, eller begge."
+    }
+  },
+  "services": {
+    "set_positions": {
+      "name": "Sæt positioner",
+      "description": "Flytter top- og bundskinnen på et top-down/bottom-up-gardin med én kommando. En skinne, der ikke angives, bliver, hvor den er.",
+      "fields": {
+        "top": {
+          "name": "Top",
+          "description": "Hvor topskinnen skal hen: 0 helt oppe, 100 helt nede."
+        },
+        "bottom": {
+          "name": "Bund",
+          "description": "Hvor bundskinnen skal hen: 0 helt nede, 100 helt oppe."
+        }
+      }
+    }
+  }
+}
