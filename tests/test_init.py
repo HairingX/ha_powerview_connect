@@ -54,7 +54,7 @@ async def test_the_gateway_and_each_shade_are_devices(
     assert shade.via_device_id == gateway.id
     assert shade.suggested_area == "Living Room"
     entities = er.async_entries_for_config_entry(er.async_get(hass), loaded.entry.entry_id)
-    assert sorted(entity.entity_id for entity in entities) == [
+    assert sorted(entity.entity_id for entity in entities if entity.domain != "button") == [
         "binary_sensor.bedroom_roller_battery", "cover.bedroom_blind", "cover.bedroom_roller",
         "cover.bedroom_skylight", "cover.living_room_kitchen_window_bottom",
         "cover.living_room_kitchen_window_top", "cover.living_room_patio_door",

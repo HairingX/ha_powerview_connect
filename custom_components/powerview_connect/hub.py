@@ -290,6 +290,28 @@ class PowerViewHub:
             self._poll_soon(shade_id)
         self._notify(shade_id)
 
+    async def async_jog(self, shade_id: int) -> None:
+        """Move a shade briefly back and forth, to show which one it is.
+
+        Raises:
+            HomeAssistantError: the gateway did not take the command.
+        """
+        try:
+            await self.client.jog(shade_id)
+        except PowerViewError as err:
+            raise _command_failed(err) from err
+
+    async def async_move_to_favorite(self, shade_id: int) -> None:
+        """Move a shade to its favorite position; the move arrives on the event stream.
+
+        Raises:
+            HomeAssistantError: the gateway did not take the command.
+        """
+        try:
+            await self.client.move_to_favorite(shade_id)
+        except PowerViewError as err:
+            raise _command_failed(err) from err
+
     async def async_activate_scene(self, scene_id: int) -> None:
         """Activate a scene; the moves it starts arrive on the event stream.
 

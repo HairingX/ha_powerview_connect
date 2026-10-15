@@ -21,7 +21,7 @@ from .entity import gateway_device, gateway_identifier, shade_identifier
 from .hub import PowerViewConfigEntry, PowerViewHub, new_client
 
 PLATFORMS: list[Platform] = [
-    Platform.BINARY_SENSOR, Platform.COVER, Platform.SCENE, Platform.SENSOR
+    Platform.BINARY_SENSOR, Platform.BUTTON, Platform.COVER, Platform.SCENE, Platform.SENSOR
 ]
 # Home Assistant's own annotations of these two leave types unknown to a strict check: a bare
 # `dict`, and probatio's generic `All`. They are taken by name, with the types they have.
