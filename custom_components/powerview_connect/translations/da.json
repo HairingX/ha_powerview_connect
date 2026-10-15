@@ -3,7 +3,7 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Opsæt PowerView Gen 3",
+        "title": "Opsæt PowerView Connect",
         "description": "Angiv adressen på den primære PowerView Gen 3-gateway: den, der ikke er en ekstra gateway. Den betjener alle hjemmets gardiner.",
         "data": {
           "host": "Vært"

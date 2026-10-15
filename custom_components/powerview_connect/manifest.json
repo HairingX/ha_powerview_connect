@@ -1,6 +1,6 @@
 {
   "domain": "powerview_connect",
-  "name": "PowerView Gen 3 (unofficial)",
+  "name": "PowerView Connect",
   "codeowners": ["@HairingX"],
   "config_flow": true,
   "dependencies": [],
