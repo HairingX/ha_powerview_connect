@@ -9,6 +9,7 @@ import pytest
 from homeassistant.components.cover import (
     ATTR_CURRENT_POSITION,
     ATTR_POSITION,
+    ATTR_TILT_POSITION,
     DOMAIN as COVER_DOMAIN,
     CoverState,
 )
@@ -17,6 +18,7 @@ from homeassistant.const import (
     SERVICE_CLOSE_COVER,
     SERVICE_OPEN_COVER,
     SERVICE_SET_COVER_POSITION,
+    SERVICE_SET_COVER_TILT_POSITION,
     SERVICE_STOP_COVER,
 )
 from homeassistant.core import HomeAssistant
@@ -71,7 +73,8 @@ async def test_each_rail_is_a_cover_at_its_position(
     assert _position(hass, BOTTOM_UP_COVER) == 40
     # A top-down shade opens downwards: its rail at 0.25 is 75 % closed.
     assert _position(hass, TOP_DOWN_COVER) == 75
-    assert _position(hass, TILT_COVER) == 50
+    assert state(hass, TILT_COVER).attributes["current_tilt_position"] == 50
+    assert ATTR_CURRENT_POSITION not in state(hass, TILT_COVER).attributes
     assert state(hass, TOP).attributes["target_position"] is None
     assert state(hass, TOP).attributes["device_class"] == "shade"
 
@@ -83,7 +86,7 @@ async def test_each_rail_is_a_cover_at_its_position(
         (BOTTOM, SERVICE_OPEN_COVER, {}, {"primary": 1.0}),
         (BOTTOM_UP_COVER, SERVICE_CLOSE_COVER, {}, {"primary": 0.0}),
         (TOP_DOWN_COVER, SERVICE_SET_COVER_POSITION, {ATTR_POSITION: 100}, {"primary": 0.0}),
-        (TILT_COVER, SERVICE_SET_COVER_POSITION, {ATTR_POSITION: 30}, {"tilt": 0.3}),
+        (TILT_COVER, SERVICE_SET_COVER_TILT_POSITION, {ATTR_TILT_POSITION: 30}, {"tilt": 0.3}),
     ],
 )
 async def test_a_command_sends_only_its_own_rail(
