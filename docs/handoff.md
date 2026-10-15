@@ -61,7 +61,7 @@ polling and SSE for them were not tested); tilt / dual-overlapped / tilt-only ty
 
 ## What is left (in order)
 
-1. **Library repository `HairingX/powerview`** (created by the owner; holds only a LICENSE).
+1. **Library repository `HairingX/powerview_connect`** (created by the owner; holds only a LICENSE).
    Build it like `HairingX/wavin_sentio_connect` (public; read its CLAUDE.md, pyproject.toml,
    src/ layout, py.typed, tests, release and PyPI workflows):
    - Move `model.py`, `api.py` and `motion.py` there, plus `testing.py`: a simulated gateway — an
@@ -69,19 +69,18 @@ polling and SSE for them were not tested); tilt / dual-overlapped / tilt-only ty
      the SSE stream from per-subscriber queues, with test controls to emit events, set
      intermediate positions, finish motion, drop streams and go offline, behaving as the table
      above. No Home Assistant imports; aiohttp is its only runtime dependency.
-   - **Names:** the PyPI name `powerview` is taken (an unrelated Active Directory tool, checked
-     2026-10-15), so the distribution and import name must differ; proposed: distribution
-     `powerview-gen3`, import `powerview_gen3`, repository name unchanged. Confirm with the
-     owner before the first release, as PyPI names cannot be renamed.
+   - **Names:** repository, distribution and import name are all `powerview_connect`, like
+     `wavin_sentio_connect`. (The PyPI name `powerview` is taken by an unrelated Active Directory
+     tool; whether `powerview_connect` is free on PyPI could not be checked from the earlier
+     session - check before the first release, as PyPI names cannot be renamed.)
    - pyright strict, 100 % coverage, tests of the client against `testing.py`, the captured data
      in `tests/test_engine.py` as fixtures, a live test reading a gateway given by an environment
      variable (read-only: GET /home and the SSE stream; it must never move a shade).
    - Release to PyPI with trusted publishing; the owner has to add the trusted publisher on
      PyPI for the release workflow.
    - Then in this repository: depend on it in `manifest.json` `requirements` and
-     `requirements-test.txt`, set `LIBRARIES` in `.github/scripts/test_build.py` (it uses the
-     repository name for the branch archive and the distribution name for the requirement —
-     adapt it, as the two differ), copy the template's `library-released` workflow, and add the
+     `requirements-test.txt`, set `LIBRARIES` in `.github/scripts/test_build.py` (the repository and distribution
+     name are both `powerview_connect`), copy the template's `library-released` workflow, and add the
      template's contract tests for the pin and for importing the library from its package.
    Until the library is released, keep developing both together with a branch of the same name
    in each repository, as the template's CI supports.

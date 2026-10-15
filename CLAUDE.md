@@ -2,9 +2,8 @@
 
 A Home Assistant integration, installed through HACS, for Hunter Douglas / Luxaflex PowerView
 Gen 3 gateways over their local HTTP API and event stream. The gateway itself is modelled by the
-library from `HairingX/powerview`; this repository only turns it into Home Assistant devices and
-entities. How and why it is
-built as it is: `docs/design.md`. Work in progress: `docs/handoff.md` says what is left.
+`powerview_connect` library; this repository only turns it into Home Assistant devices and
+entities. How and why it is built as it is: `docs/design.md`. Work in progress: `docs/handoff.md` says what is left.
 
 ## Comments and docstrings
 
