@@ -76,6 +76,22 @@
             "name": "Målposition"
           }
         }
+      },
+      "front": {
+        "name": "Forreste",
+        "state_attributes": {
+          "target_position": {
+            "name": "Målposition"
+          }
+        }
+      },
+      "rear": {
+        "name": "Bagerste",
+        "state_attributes": {
+          "target_position": {
+            "name": "Målposition"
+          }
+        }
       }
     },
     "sensor": {

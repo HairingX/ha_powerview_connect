@@ -58,9 +58,12 @@ The tracker's clock is the hub's `clock`, `time.monotonic` unless a test sets an
 ## Devices and entities
 
 - The gateway is a device; each shade a device connected through it, in the area of its room.
-- A shade's covers follow its capabilities: two for top-down/bottom-up (*Top*, the top rail, and
-  *Bottom*, the bottom rail), one inverted for top-down, one for the vanes of a tilt-only shade,
-  one for the primary rail otherwise.
+- A shade's covers follow its capabilities, as the Gen 3 API describes them: two for
+  top-down/bottom-up (*Top*, the top rail, and *Bottom*, the bottom rail), two for
+  dual-overlapped (*Front*, the primary rail, and *Rear*, the secondary), one inverted for
+  top-down, one for the primary rail otherwise. Vanes are a cover's tilt: the only rail's for a
+  shade that tilts, the front's for a dual-overlapped one, and the whole cover of a tilt-only
+  shade. Vertical shades are curtains. Only the top-down/bottom-up shade has been measured.
 - The covers set `_attr_` values whenever the hub tells them their shade changed; nothing is
   polled by Home Assistant.
 - Scenes belong to the gateway's device.
