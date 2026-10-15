@@ -45,23 +45,28 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Install the test tools, Home Assistant and the libraries
-        run: python -m pip install -r requirements-test.txt
-
       # A development branch is tested with the libraries' branch of the same name, where they
-      # have one, as the three are developed together. main is tested with what the manifest pins.
-      - name: Use the libraries' branch of the same name
+      # have one, as they are developed together; such a library takes the place of its pin, which
+      # need not be released yet. main is tested with what the manifest pins.
+      - name: Install the test tools, Home Assistant and the libraries
         env:
           BRANCH: ${{ inputs.branch || github.head_ref || github.ref_name }}
         run: |
+          requirements="$RUNNER_TEMP/requirements.txt"
+          cp requirements-test.txt "$requirements"
           if [[ "$BRANCH" == "main" ]]; then
             echo "main: the libraries the manifest pins"
-            exit 0
+          else
+            python -m pip install packaging
+            python .github/scripts/test_build.py libraries "$BRANCH" > "$RUNNER_TEMP/libraries"
+            while read -r requirement; do
+              echo "Library: $requirement"
+              grep -v -i -E "^${requirement%% *}[=<>!~ ]" "$requirements" > "$RUNNER_TEMP/kept" || true
+              { cat "$RUNNER_TEMP/kept"; echo "$requirement"; } > "$requirements"
+            done < "$RUNNER_TEMP/libraries"
           fi
-          python .github/scripts/test_build.py libraries "$BRANCH" | while read -r requirement; do
-            echo "Library: $requirement"
-            python -m pip install "$requirement"
-          done
+          python -m pip install -r "$requirements"
+          python -m pip show powerview_connect | grep -E '^(Name|Version):'
 
       - name: Type check (pyright strict)
         run: |

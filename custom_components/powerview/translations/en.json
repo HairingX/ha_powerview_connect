@@ -1,20 +1,47 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "PowerView Gen 3 gateway",
-        "description": "Enter the IP address of the primary PowerView Gen 3 gateway (the one that is not an auxiliary gateway).",
-        "data": { "host": "Host" },
-        "data_description": { "host": "IP address or hostname, e.g. 192.0.2.32" }
+        "title": "Set up PowerView Gen 3",
+        "description": "Enter the address of the primary PowerView Gen 3 gateway: the one that is not an auxiliary gateway. It serves every shade of the home.",
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "The IP address or host name of the primary gateway."
+        }
+      },
+      "discovery_confirm": {
+        "title": "PowerView Gen 3 gateway found",
+        "description": "Add the PowerView home of {name} at {host}?"
+      },
+      "reconfigure": {
+        "title": "Change the gateway's address",
+        "description": "Change where the primary gateway is reached. It must be the same home's gateway.",
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "The IP address or host name of the primary gateway."
+        }
       }
     },
     "error": {
-      "cannot_connect": "Could not reach a PowerView Gen 3 gateway at this address.",
-      "not_primary": "This is an auxiliary gateway. Use the primary gateway instead ({primary}).",
+      "cannot_connect": "No PowerView Gen 3 gateway answers at this address.",
+      "invalid_host": "Enter a host.",
+      "not_primary": "This is an auxiliary gateway. Enter the primary gateway instead ({primary}).",
       "no_shades": "The gateway reports no shades."
     },
     "abort": {
-      "already_configured": "This PowerView home is already configured."
+      "already_configured": "This PowerView home is already configured.",
+      "already_in_progress": "This PowerView home is already being set up.",
+      "cannot_connect": "No PowerView Gen 3 gateway answers at the discovered address.",
+      "invalid_host": "The gateway announced no address.",
+      "not_primary": "The discovered gateway is an auxiliary gateway; the primary gateway serves the home.",
+      "no_shades": "The gateway reports no shades.",
+      "reconfigure_successful": "The gateway's address was changed.",
+      "wrong_gateway": "The gateway at this address belongs to another PowerView home. Add it as a new home instead."
     }
   },
   "options": {
@@ -22,33 +49,63 @@
       "init": {
         "title": "PowerView options",
         "data": {
-          "motion_poll_interval": "Poll interval while a shade moves (seconds)",
-          "refresh_minutes": "Full refresh interval (minutes)"
+          "motion_poll_interval": "Read a moving shade every (seconds)",
+          "refresh_minutes": "Read the whole home every (minutes)"
         },
         "data_description": {
-          "motion_poll_interval": "Live position updates while moving. Shades that stand still are never polled.",
-          "refresh_minutes": "Safety-net refresh of all shades in case an event was missed."
+          "motion_poll_interval": "How often a moving shade's position is read. A shade standing still is never read.",
+          "refresh_minutes": "How often every shade is read, in case an event from the gateway was missed."
         }
       }
     }
   },
   "entity": {
     "cover": {
-      "top": { "name": "Top" },
-      "bottom": { "name": "Bottom" }
+      "top": {
+        "name": "Top",
+        "state_attributes": {
+          "target_position": {
+            "name": "Target position"
+          }
+        }
+      },
+      "bottom": {
+        "name": "Bottom",
+        "state_attributes": {
+          "target_position": {
+            "name": "Target position"
+          }
+        }
+      }
     }
   },
   "exceptions": {
-    "not_tdbu": { "message": "{entity_id} is not a top-down/bottom-up shade." },
-    "no_position": { "message": "Give a top and/or bottom position." }
+    "cannot_connect": {
+      "message": "The PowerView gateway at {host} does not answer."
+    },
+    "command_failed": {
+      "message": "The PowerView gateway did not take the command: {error}"
+    },
+    "not_top_down_bottom_up": {
+      "message": "{entity_id} is not a top-down/bottom-up shade."
+    },
+    "no_position": {
+      "message": "Give a top or a bottom position, or both."
+    }
   },
   "services": {
     "set_positions": {
       "name": "Set positions",
-      "description": "Move the top and/or bottom rail of a top-down/bottom-up shade in one request. Rails that are not given stay where they are.",
+      "description": "Moves the top and bottom rails of a top-down/bottom-up shade in one command. A rail not given stays where it is.",
       "fields": {
-        "top": { "name": "Top", "description": "Top rail position (0 = top rail at the top, 100 = fully down)." },
-        "bottom": { "name": "Bottom", "description": "Bottom rail position (0 = fully down, 100 = fully up)." }
+        "top": {
+          "name": "Top",
+          "description": "Where the top rail goes: 0 at the top, 100 fully down."
+        },
+        "bottom": {
+          "name": "Bottom",
+          "description": "Where the bottom rail goes: 0 fully down, 100 fully up."
+        }
       }
     }
   }

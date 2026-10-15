@@ -3,7 +3,9 @@
 A Home Assistant integration, installed through HACS, for Hunter Douglas / Luxaflex PowerView
 Gen 3 gateways over their local HTTP API and event stream. The gateway itself is modelled by the
 `powerview_connect` library; this repository only turns it into Home Assistant devices and
-entities. How and why it is built as it is: `docs/design.md`. Work in progress: `docs/handoff.md` says what is left.
+entities. How and why it is built as it is: `docs/design.md`. What a real gateway was measured to
+do is the source of truth: a command sends only its own rail, the event stream says when a shade
+starts and stops moving, and a shade is read only while it moves.
 
 ## Comments and docstrings
 
@@ -41,23 +43,26 @@ obvious from the name - one or two lines, no narrative.
   No `# type: ignore` and no rule turned off: where Home Assistant's own types force a choice,
   take the typed route (`_attr_` values rather than overridden properties).
 - Every problem found gets a test that fails without the fix.
-- The tests run the real client against the library's simulated gateway (its `testing`
-  module), an HTTP server on 127.0.0.1 that behaves as a real Gen 3 gateway was measured to; they
-  never reach a real gateway.
-- Test tools and Home Assistant are pinned in `requirements-test.txt`:
+- The tests run the real client against the library's simulated gateway
+  (`powerview_connect.testing`), an HTTP server on 127.0.0.1 that behaves as a real Gen 3
+  gateway was measured to. They never reach a real gateway.
+- Test tools, Home Assistant and the library are pinned in `requirements-test.txt`:
   `pip install -r requirements-test.txt`. They need Python 3.14, as the pinned Home Assistant
   does, on Linux or WSL.
-- The pins agree, and tests enforce it: `hacs.json` requires the Home Assistant version the
-  tests run.
+- The pins agree, and tests enforce it: the manifest's requirement is the library version the
+  tests run and `requirements-test.txt` pins, and `hacs.json` requires the Home Assistant version
+  they run.
 - A test fails when Home Assistant reports this integration using something deprecated.
+- Every shade is a cover for each rail it moves; a command sends only its own rail.
 - Translations live in `translations/en.json` and `translations/da.json`, which hold the same
   keys; icons in `icons.json`, by translation key.
-- No real IP addresses, hostnames or email addresses in tracked files.
+- No real IP addresses, hostnames, serial numbers or email addresses in tracked files; a test
+  checks the addresses. Examples use the documentation ranges, such as 192.0.2.0/24.
 
 ## Keeping up with Home Assistant
 
 Best practice is what Home Assistant and HACS require and recommend now; it moves with every
-release. After any change to the integration:
+release. After any change to the integration or to the libraries it uses:
 
 1. Test against the newest Home Assistant release: pin it in `requirements-test.txt` (through
    pytest-homeassistant-custom-component) and `hacs.json`, then run the tests, pyright and
@@ -67,7 +72,8 @@ release. After any change to the integration:
    exemption and each rule not yet met.
 3. Read the Home Assistant developer blog since the last check for changes to what integrations
    do.
-4. Run the live test against a real gateway.
+4. Run the live test against a real gateway. It only reads - `GET /home` and the event stream,
+   with a read-only client - and never moves a shade.
 
 ## Releasing
 
@@ -100,6 +106,9 @@ final release's notes are the draft's: edit the draft - it lists what was merged
 final release - and run Release before anything else is merged, as a merge rewrites the draft.
 Without a draft, GitHub writes them from the pull requests since the previous final release. Test builds are not counted as releases.
 
+The library comes from PyPI at the version the manifest pins. **Release the library first**, then
+pin its version here in the manifest and `requirements-test.txt`.
+
 Actions are referred to by their major version where they publish one; Dependabot proposes a new
 major, and updates to the test tools, as pull requests.
 
@@ -111,12 +120,20 @@ workflow from the Actions tab on that branch:
 
 1. It tests and validates the branch's commit, then publishes it as a pre-release such as
    `v0.1.0b3`: the next release's version with the first free `b<n>`. The branch's commit is
-   tagged; the version is set only in the zip the pre-release carries.
-2. In Home Assistant, switch pre-releases on for this repository in HACS, and install the test
+   tagged; the version and the libraries are set only in the zip the pre-release carries.
+2. Where powerview_connect has a branch of the same name, the test
+   build requires that branch's current commit, from GitHub; otherwise the version the manifest
+   pins. Home Assistant then checks that requirement at every start, so it must reach GitHub.
+3. In Home Assistant, switch pre-releases on for this repository in HACS, and install the test
    build. Switch them off and install the latest release to go back.
 
 A new test build of a branch replaces its previous one, and closing the branch's pull request or
-deleting the branch removes them.
+deleting the branch removes them. Development branches are tested the same way in CI: with the
+libraries' branch of the same name, where they have one, in place of the pin in
+`requirements-test.txt`, which need not be released yet. The test that the manifest pins the
+library the tests run is skipped then, as a library built from a branch is no release; instead,
+the check "Libraries released and pinned" fails until the library is released, pinned here and
+its branch deleted. Make that check required, so such a pull request is not merged.
 
 ## Branches and pull requests
 
@@ -128,7 +145,7 @@ deleting the branch removes them.
   `docs/<what>` is labelled `documentation`, and `chore/<what>` - CI, tooling, anything that
   stays in the repository - is labelled `chore`. The release notes list features and fixes;
   documentation, chores and Dependabot's `dependencies` are left out. A change to what a user
-  installs is a `fix/` or a `feature/`, never a `chore/`.
+  installs, such as a new library pin, is a `fix/` or a `feature/`, never a `chore/`.
 - A pull request's text describes only its own change: what it does and how it was tested. Never
   releases to come, merge order, or other repositories.
 - Put `breaking-change` on a pull request that breaks the API - a `feature/` or `fix/` one, as a

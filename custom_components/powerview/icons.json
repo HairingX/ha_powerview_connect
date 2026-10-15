@@ -1,5 +1,23 @@
 {
+  "entity": {
+    "cover": {
+      "top": {
+        "default": "mdi:roller-shade",
+        "state": {
+          "closed": "mdi:roller-shade-closed"
+        }
+      },
+      "bottom": {
+        "default": "mdi:roller-shade",
+        "state": {
+          "closed": "mdi:roller-shade-closed"
+        }
+      }
+    }
+  },
   "services": {
-    "set_positions": { "service": "mdi:roller-shade" }
+    "set_positions": {
+      "service": "mdi:roller-shade"
+    }
   }
 }

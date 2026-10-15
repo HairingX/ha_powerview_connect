@@ -16,9 +16,8 @@ from packaging.requirements import Requirement
 from packaging.version import Version
 
 OWNER = "https://github.com/HairingX"
-LIBRARIES: tuple[str, ...] = ()
-"""Libraries developed alongside this integration, in the order they are installed. The gateway
-protocol lives in the integration's gen3 package until it is released as a library of its own."""
+LIBRARIES: tuple[str, ...] = ("powerview_connect",)
+"""Libraries developed alongside this integration, in the order they are installed."""
 
 
 def _heads(repository: str, branch: str) -> str | None:
