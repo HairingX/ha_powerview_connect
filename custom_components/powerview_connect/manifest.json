@@ -1,5 +1,5 @@
 {
-  "domain": "powerview",
+  "domain": "powerview_connect",
   "name": "PowerView Gen 3 (unofficial)",
   "codeowners": ["@HairingX"],
   "config_flow": true,

@@ -16,9 +16,9 @@ from powerview_connect import EventKind
 from powerview_connect.testing import SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.powerview import async_remove_config_entry_device
-from custom_components.powerview.const import DOMAIN
-from custom_components.powerview.hub import PowerViewHub
+from custom_components.powerview_connect import async_remove_config_entry_device
+from custom_components.powerview_connect.const import DOMAIN
+from custom_components.powerview_connect.hub import PowerViewHub
 
 from .conftest import BOTTOM_UP, SERIAL, TDBU, P, S, state, until
 

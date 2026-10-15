@@ -27,8 +27,8 @@ from powerview_connect import PowerViewClient
 from powerview_connect.testing import SimulatedGateway
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
-from custom_components.powerview.const import DOMAIN, SERVICE_SET_POSITIONS
-from custom_components.powerview.hub import PowerViewHub
+from custom_components.powerview_connect.const import DOMAIN, SERVICE_SET_POSITIONS
+from custom_components.powerview_connect.hub import PowerViewHub
 
 from .conftest import BOTTOM_UP, TDBU, FakeClock, P, S, state, until
 

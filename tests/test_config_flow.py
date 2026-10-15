@@ -21,8 +21,8 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from powerview_connect.testing import SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.powerview.const import DOMAIN
-from custom_components.powerview.hub import PowerViewHub
+from custom_components.powerview_connect.const import DOMAIN
+from custom_components.powerview_connect.hub import PowerViewHub
 
 from .conftest import SERIAL, TITLE
 

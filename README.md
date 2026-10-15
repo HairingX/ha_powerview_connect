@@ -58,10 +58,10 @@ repository.
 
 ### Manually
 
-1. Download `powerview.zip` from the
+1. Download `powerview_connect.zip` from the
    [latest release](https://github.com/HairingX/ha_powerview_connect/releases/latest) - not the source
    code, whose manifest carries no version.
-2. Unpack it into a new folder `custom_components/powerview` in your Home Assistant
+2. Unpack it into a new folder `custom_components/powerview_connect` in your Home Assistant
    configuration.
 3. Restart Home Assistant.
 
@@ -75,7 +75,7 @@ itself.
 
 **By its address:**
 
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=powerview)
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=powerview_connect)
 
 Select the button, or go to Settings > Devices & services > Add integration >
 **PowerView Gen 3 (unofficial)**, and enter the **primary** gateway's IP address or host name.
@@ -115,7 +115,7 @@ integration:
 The shade itself stops a rail where it meets the other one, so a command that would cross them
 is safe.
 
-**The action `powerview.set_positions`** moves both rails of a top-down/bottom-up shade in one
+**The action `powerview_connect.set_positions`** moves both rails of a top-down/bottom-up shade in one
 command; give `top`, `bottom` or both, and a rail not given stays where it is. Target either of
 the shade's two covers.
 
@@ -149,7 +149,7 @@ cards:
     icon: mdi:roller-shade
     tap_action:
       action: perform-action
-      perform_action: powerview.set_positions
+      perform_action: powerview_connect.set_positions
       target:
         entity_id: cover.living_room_kitchen_window_top   # either cover of the shade
       data:
@@ -160,7 +160,7 @@ cards:
     icon: mdi:roller-shade
     tap_action:
       action: perform-action
-      perform_action: powerview.set_positions
+      perform_action: powerview_connect.set_positions
       target:
         entity_id: cover.living_room_kitchen_window_top
       data:
@@ -171,7 +171,7 @@ cards:
     icon: mdi:roller-shade-closed
     tap_action:
       action: perform-action
-      perform_action: powerview.set_positions
+      perform_action: powerview_connect.set_positions
       target:
         entity_id: cover.living_room_kitchen_window_top
       data:
@@ -243,7 +243,7 @@ The two can run side by side; both are offered when a Gen 3 gateway is discovere
 ## Removing the integration
 
 Settings > Devices & services > PowerView Gen 3 (unofficial) > the three dots > Delete. Uninstall
-it in HACS, or delete `custom_components/powerview`, and restart Home Assistant.
+it in HACS, or delete `custom_components/powerview_connect`, and restart Home Assistant.
 
 A shade removed from the home in the PowerView app is removed by itself at the next read of the
 home.

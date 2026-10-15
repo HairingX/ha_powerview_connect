@@ -78,7 +78,7 @@ jobs:
       - name: Test
         run: >-
           python -m pytest -m "not live" -q -o log_cli=false
-          --cov=custom_components.powerview --cov-report=term-missing
+          --cov=custom_components.powerview_connect --cov-report=term-missing
           --cov-fail-under=100
 
       - name: Test the release scripts

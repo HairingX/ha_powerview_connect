@@ -2,7 +2,7 @@ rules:
   # Bronze
   action-setup:
     status: done
-    comment: powerview.set_positions is registered when the integration sets up, not per entry.
+    comment: powerview_connect.set_positions is registered when the integration sets up, not per entry.
   appropriate-polling:
     status: done
     comment: >-

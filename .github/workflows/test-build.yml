@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  MANIFEST: custom_components/powerview/manifest.json
+  MANIFEST: custom_components/powerview_connect/manifest.json
 
 # The shell given explicitly, so GitHub runs every step with pipefail.
 defaults:

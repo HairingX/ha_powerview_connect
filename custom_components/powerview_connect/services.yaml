@@ -1,7 +1,7 @@
 set_positions:
   target:
     entity:
-      integration: powerview
+      integration: powerview_connect
       domain: cover
   fields:
     top:
