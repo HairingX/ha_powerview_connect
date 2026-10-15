@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from powerview_connect import Scene as GatewayScene
 
-from .entity import PowerViewEntity, gateway_device
+from .entity import PowerViewEntity, add_entities, gateway_device
 from .hub import PowerViewConfigEntry, PowerViewHub
 
 PARALLEL_UPDATES = 0
@@ -22,7 +22,7 @@ async def async_setup_entry(
 ) -> None:
     """Add a scene for each scene on the gateway."""
     hub = entry.runtime_data
-    async_add_entities(PowerViewScene(hub, scene) for scene in hub.home.scenes)
+    add_entities(hub, async_add_entities, [PowerViewScene(hub, scene) for scene in hub.home.scenes])
 
 
 class PowerViewScene(PowerViewEntity, Scene):

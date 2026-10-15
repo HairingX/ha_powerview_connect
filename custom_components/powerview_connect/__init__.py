@@ -11,6 +11,7 @@ from homeassistant.const import CONF_HOST, Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import service
 from homeassistant.helpers.typing import ConfigType
@@ -71,6 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) ->
     ).id
     _remove_stale_devices(registry, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _remove_lost_entities(hass, entry)
     hub.async_start()
     return True
 
@@ -90,6 +92,15 @@ async def async_remove_config_entry_device(
 def _current_identifiers(hub: PowerViewHub) -> set[tuple[str, str]]:
     return {gateway_identifier(hub)} | {
         shade_identifier(hub, shade_id) for shade_id in hub.home.shades}
+
+
+@callback
+def _remove_lost_entities(hass: HomeAssistant, entry: PowerViewConfigEntry) -> None:
+    """Remove the entities this version no longer makes, so none is left unavailable."""
+    registry = er.async_get(hass)
+    for found in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if found.unique_id not in entry.runtime_data.unique_ids:
+            registry.async_remove(found.entity_id)
 
 
 @callback

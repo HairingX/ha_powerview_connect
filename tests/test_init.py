@@ -214,3 +214,17 @@ def _position(hass: HomeAssistant, entity_id: str) -> int | None:
         return None
     position = state.attributes.get("current_position")
     return position if isinstance(position, int) else None
+
+
+async def test_an_entity_the_integration_no_longer_makes_is_removed(
+    hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway
+) -> None:
+    """Such as a button a former version made for each shade."""
+    config_entry.add_to_hass(hass)
+    entities = er.async_get(hass)
+    gone = entities.async_get_or_create(
+        "button", DOMAIN, f"{SERIAL}_{TDBU}_favorite", config_entry=config_entry)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    assert entities.async_get(gone.entity_id) is None
+    assert entities.async_get("cover.living_room_kitchen_window_top") is not None
+    await hass.config_entries.async_unload(config_entry.entry_id)

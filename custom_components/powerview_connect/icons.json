@@ -36,11 +36,6 @@
           "plugged_in": "mdi:power-plug-battery"
         }
       }
-    },
-    "button": {
-      "favorite": {
-        "default": "mdi:heart"
-      }
     }
   },
   "services": {

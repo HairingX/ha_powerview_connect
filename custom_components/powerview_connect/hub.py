@@ -78,6 +78,8 @@ class PowerViewHub:
         }
         self.gateway_device_id = ""
         """The gateway's device id, set when its device is registered."""
+        self.unique_ids: set[str] = set()
+        """The unique id of every entity the entry has, disabled ones included."""
         self.available = True
         self.stream_connected = False
         self.clock: Callable[[], float] = time.monotonic
@@ -298,17 +300,6 @@ class PowerViewHub:
         """
         try:
             await self.client.jog(shade_id)
-        except PowerViewError as err:
-            raise _command_failed(err) from err
-
-    async def async_move_to_favorite(self, shade_id: int) -> None:
-        """Move a shade to its favorite position; the move arrives on the event stream.
-
-        Raises:
-            HomeAssistantError: the gateway did not take the command.
-        """
-        try:
-            await self.client.move_to_favorite(shade_id)
         except PowerViewError as err:
             raise _command_failed(err) from err
 

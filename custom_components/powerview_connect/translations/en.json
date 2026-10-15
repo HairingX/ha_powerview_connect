@@ -104,11 +104,6 @@
           "plugged_in": "Plugged in"
         }
       }
-    },
-    "button": {
-      "favorite": {
-        "name": "Favorite position"
-      }
     }
   },
   "exceptions": {
