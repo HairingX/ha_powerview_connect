@@ -67,8 +67,8 @@ The tracker's clock is the hub's `clock`, `time.monotonic` unless a test sets an
 - The covers set `_attr_` values whenever the hub tells them their shade changed; nothing is
   polled by Home Assistant.
 - Scenes belong to the gateway's device.
-- Each shade has an Identify button, a jog. The gateway takes no other motion: a move to the
-  favorite position is refused with HTTP 400, so there is no button for it.
+- Each shade has an Identify button, a jog. The gateway takes no other motion: a move to either
+  of a shade's two favorite positions is refused with HTTP 400, so there are no buttons for them.
 - A shade the gateway reports a signal strength for has a signal strength sensor, a diagnostic
   disabled by default. The hub keeps the value from each read of the home and of a moving shade.
   A shade whose `powerType` is not hard-wired (1) has a battery level and a low battery sensor; a

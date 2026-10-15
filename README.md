@@ -240,8 +240,8 @@ automation:
   fabric is front and which rear, and how far a 90° shade's vanes tilt, are as it describes them.
   If one behaves otherwise, please report it with the shade's `GET /home/shades/{id}`.
 - Stop stops both rails of a top-down/bottom-up shade: the gateway stops a whole shade.
-- No button for the favorite position (the remote's heart button): the gateway refuses that
-  command; it takes only a jog.
+- No buttons for a shade's two favorite positions (the heart buttons of the app and the
+  remote): the gateway's local API refuses that command; it takes only a jog.
 - The battery levels are those the Gen 3 API describes; they have not been read from a battery
   shade yet. The gateway reports steps, not a percentage.
 - The gateway's estimate of how long a move takes is about half the real time, so it is not
