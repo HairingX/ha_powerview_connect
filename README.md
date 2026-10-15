@@ -36,7 +36,7 @@ other. Here every command sends only its own rail, and the gateway leaves the ot
 
 ## Requirements
 
-- Home Assistant 2026.10.0 or newer.
+- Home Assistant 2026.10.1 or newer.
 - The primary gateway reachable from Home Assistant on TCP port 80. Nothing needs to reach Home
   Assistant: the event stream is a connection Home Assistant opens to the gateway. On a network
   split into VLANs, allow Home Assistant to the gateway's port 80 only.
