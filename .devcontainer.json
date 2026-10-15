@@ -1,5 +1,5 @@
 {
-    "name": "ha_powerview/devcontainer",
+    "name": "ha_powerview_connect/devcontainer",
     "image": "mcr.microsoft.com/devcontainers/python:3.14-bookworm",
     "postCreateCommand": "scripts/setup.sh",
     "appPort": [

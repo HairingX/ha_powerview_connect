@@ -45,11 +45,11 @@ other. Here every command sends only its own rail, and the gateway leaves the ot
 
 ### With HACS
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=HairingX&repository=ha_powerview&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=HairingX&repository=ha_powerview_connect&category=integration)
 
 1. Select the button to open this repository in [HACS](https://hacs.xyz). Or add it yourself: in
    HACS, the three dots > **Custom repositories**, the repository
-   `https://github.com/HairingX/ha_powerview` and the type **Integration**.
+   `https://github.com/HairingX/ha_powerview_connect` and the type **Integration**.
 2. Download **PowerView Gen 3 (unofficial)**.
 3. Restart Home Assistant.
 
@@ -59,7 +59,7 @@ repository.
 ### Manually
 
 1. Download `powerview.zip` from the
-   [latest release](https://github.com/HairingX/ha_powerview/releases/latest) - not the source
+   [latest release](https://github.com/HairingX/ha_powerview_connect/releases/latest) - not the source
    code, whose manifest carries no version.
 2. Unpack it into a new folder `custom_components/powerview` in your Home Assistant
    configuration.
