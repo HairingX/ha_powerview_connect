@@ -2,7 +2,7 @@
 
 from typing import Final
 
-DOMAIN: Final = "powerview"
+DOMAIN: Final = "powerview_connect"
 MANUFACTURER: Final = "Hunter Douglas"
 
 CONF_MOTION_POLL_INTERVAL: Final = "motion_poll_interval"

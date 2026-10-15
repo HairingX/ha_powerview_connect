@@ -16,4 +16,4 @@ debugpy:
 logger:
   default: info
   logs:
-    custom_components.powerview: debug
+    custom_components.powerview_connect: debug

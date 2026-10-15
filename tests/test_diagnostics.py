@@ -7,8 +7,8 @@ import json
 from homeassistant.core import HomeAssistant
 from powerview_connect.testing import SimulatedGateway
 
-from custom_components.powerview.diagnostics import async_get_config_entry_diagnostics
-from custom_components.powerview.hub import PowerViewHub
+from custom_components.powerview_connect.diagnostics import async_get_config_entry_diagnostics
+from custom_components.powerview_connect.hub import PowerViewHub
 
 from .conftest import SERIAL, TDBU
 

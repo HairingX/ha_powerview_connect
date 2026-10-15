@@ -26,8 +26,8 @@ from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from powerview_connect import PowerViewClient
 
-from custom_components.powerview.const import DOMAIN
-from custom_components.powerview.hub import PowerViewHub
+from custom_components.powerview_connect.const import DOMAIN
+from custom_components.powerview_connect.hub import PowerViewHub
 
 from .conftest import until
 
@@ -64,9 +64,9 @@ def read_only(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[PowerViewClient]
         made.append(client)
         return client
 
-    monkeypatch.setattr("custom_components.powerview.hub.new_client", new_client)
-    monkeypatch.setattr("custom_components.powerview.new_client", new_client)
-    monkeypatch.setattr("custom_components.powerview.config_flow.new_client", new_client)
+    monkeypatch.setattr("custom_components.powerview_connect.hub.new_client", new_client)
+    monkeypatch.setattr("custom_components.powerview_connect.new_client", new_client)
+    monkeypatch.setattr("custom_components.powerview_connect.config_flow.new_client", new_client)
     yield made
 
 

@@ -18,7 +18,7 @@ import yaml
 from homeassistant.const import __version__ as HA_VERSION
 from packaging.version import Version
 
-INTEGRATION = Path(__file__).parents[1] / "custom_components" / "powerview"
+INTEGRATION = Path(__file__).parents[1] / "custom_components" / "powerview_connect"
 REPOSITORY = INTEGRATION.parents[1]
 
 
@@ -105,6 +105,14 @@ def test_the_library_is_imported_from_its_package_not_from_the_integration() -> 
     import powerview_connect
 
     assert INTEGRATION not in Path(powerview_connect.__file__).parents
+
+
+def test_the_domain_is_the_folder_the_zip_and_the_librarys_name() -> None:
+    """Home Assistant finds an integration by its folder, and HACS unpacks the zip into it."""
+    from custom_components.powerview_connect.const import DOMAIN
+
+    assert _manifest()["domain"] == DOMAIN == INTEGRATION.name == "powerview_connect"
+    assert _json(REPOSITORY / "hacs.json")["filename"] == f"{DOMAIN}.zip"
 
 
 def test_the_gateway_is_discovered_by_its_mdns_service() -> None:

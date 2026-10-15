@@ -17,7 +17,7 @@ shade (shade firmware 3.0.433):
 | `etaInSeconds` against the real time from started to stopped: 5 → 9.6 s, 6 → 10.7, 9 → 16.6, 10 → 19.0-19.2, 19 → 41.8. | The estimate does not decide when a shade has arrived. |
 | `GET /home/shades/{id}` (without `?refresh=true`) returns **live positions** while moving: 0.01 steps, about once a second, ramping up and down. The PowerView app evidently reads it too. | A moving shade is read about once a second, and only while it moves. |
 | `motion-stopped` normally on time; once, for the largest two-rail move, perhaps 14-23 s late (not proven). | A move also ends when the target is reached and still for 1.5 s, on no change for 6 s, or at a timeout. |
-| Both rails in one request: they start about 1 s apart and run together. | `powerview.set_positions` sends both rails in one request. |
+| Both rails in one request: they start about 1 s apart and run together. | `powerview_connect.set_positions` sends both rails in one request. |
 | `/home` lists every gateway (`aux: true` for auxiliary ones), rooms with their shades (`capabilities`, `type`, `powerType` 1 = hard-wired, `positions` 0-1), scenes (`_id`, `name`, members with `pos1`/`pos2` 0-10000). | The config flow reads `/home`, refuses auxiliary gateways, and takes the primary gateway's serial number as the unique id. |
 | Positions run from 0.0, fully closed, to 1.0, fully open, per rail. On a top-down/bottom-up shade `primary` is the bottom rail and `secondary` the top rail. | The covers mean what the core integration's do, so cards keep working. |
 

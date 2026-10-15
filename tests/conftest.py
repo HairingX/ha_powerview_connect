@@ -17,8 +17,8 @@ from powerview_connect import Capabilities, Rail
 from powerview_connect.testing import SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.powerview.const import DOMAIN
-from custom_components.powerview.hub import PowerViewHub
+from custom_components.powerview_connect.const import DOMAIN
+from custom_components.powerview_connect.hub import PowerViewHub
 
 SERIAL = "SIMULATED-0001"
 """The simulated primary gateway's serial number, which is the entry's unique id."""
@@ -92,7 +92,7 @@ def no_deprecated_usage(caplog: pytest.LogCaptureFixture) -> Iterator[None]:
         record.getMessage()
         for phase in ("setup", "call")
         for record in caplog.get_records(phase)
-        if "custom integration 'powerview'" in record.getMessage()
+        if "custom integration 'powerview_connect'" in record.getMessage()
     ]
     assert reports == []
 
@@ -100,7 +100,7 @@ def no_deprecated_usage(caplog: pytest.LogCaptureFixture) -> Iterator[None]:
 @pytest.fixture(autouse=True)
 def quick_reconnect(monkeypatch: pytest.MonkeyPatch) -> None:
     """The event stream is reopened at once, rather than after seconds."""
-    monkeypatch.setattr("custom_components.powerview.hub.SSE_BACKOFF", (0.05,))
+    monkeypatch.setattr("custom_components.powerview_connect.hub.SSE_BACKOFF", (0.05,))
 
 
 @pytest.fixture
