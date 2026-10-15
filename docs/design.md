@@ -64,6 +64,12 @@ The tracker's clock is the hub's `clock`, `time.monotonic` unless a test sets an
 - The covers set `_attr_` values whenever the hub tells them their shade changed; nothing is
   polled by Home Assistant.
 - Scenes belong to the gateway's device.
+- A shade the gateway reports a signal strength for has a signal strength sensor, a diagnostic
+  disabled by default. The hub keeps the value from each read of the home and of a moving shade.
+  A shade whose `powerType` is not hard-wired (1) has a battery level and a low battery sensor; a
+  hard-wired shade has neither, as it reports `batteryStatus` 3 too, and a shade that reports no
+  power type is not taken to have a battery. The levels are the Gen 3 API's, not yet measured on
+  a battery shade.
 
 ## Dependencies
 

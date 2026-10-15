@@ -20,7 +20,9 @@ from .const import ATTR_BOTTOM, ATTR_TOP, DOMAIN, SERVICE_SET_POSITIONS
 from .entity import gateway_device, gateway_identifier, shade_identifier
 from .hub import PowerViewConfigEntry, PowerViewHub, new_client
 
-PLATFORMS: list[Platform] = [Platform.COVER, Platform.SCENE]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR, Platform.COVER, Platform.SCENE, Platform.SENSOR
+]
 # Home Assistant's own annotations of these two leave types unknown to a strict check: a bare
 # `dict`, and probatio's generic `All`. They are taken by name, with the types they have.
 _config_entry_only_config_schema = cast(

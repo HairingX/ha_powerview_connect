@@ -13,6 +13,17 @@
           "closed": "mdi:roller-shade-closed"
         }
       }
+    },
+    "sensor": {
+      "battery_level": {
+        "default": "mdi:battery",
+        "state": {
+          "low": "mdi:battery-10",
+          "medium": "mdi:battery-50",
+          "high": "mdi:battery",
+          "plugged_in": "mdi:power-plug-battery"
+        }
+      }
     }
   },
   "services": {
