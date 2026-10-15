@@ -14,12 +14,14 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from powerview_connect import (
+    BatteryStatus,
     EventKind,
     Gateway,
     Home,
     PowerViewClient,
     PowerViewError,
     Rail,
+    Shade,
     ShadeEvent,
     ShadeTracker,
 )
@@ -67,6 +69,10 @@ class PowerViewHub:
             shade_id: shade.signal_strength for shade_id, shade in home.shades.items()
         }
         """Each shade's signal strength in dBm, as last read."""
+        self.batteries: dict[int, BatteryStatus | None] = {
+            shade_id: shade.battery for shade_id, shade in home.shades.items()
+        }
+        """Each shade's battery status, as last read."""
         self.trackers: dict[int, ShadeTracker] = {
             shade_id: ShadeTracker(shade.positions) for shade_id, shade in home.shades.items()
         }
@@ -160,14 +166,16 @@ class PowerViewHub:
             return
         for shade_id, shade in home.shades.items():
             moved = self.trackers[shade_id].snapshot(shade.positions)
-            if self._take_signal_strength(shade_id, shade.signal_strength) or moved:
+            if self._take_reported(shade) or moved:
                 self._notify(shade_id)
 
     @callback
-    def _take_signal_strength(self, shade_id: int, signal_strength: int | None) -> bool:
-        """Keep a shade's signal strength; returns whether it changed."""
-        changed = self.signal_strengths[shade_id] != signal_strength
-        self.signal_strengths[shade_id] = signal_strength
+    def _take_reported(self, shade: Shade) -> bool:
+        """Keep a shade's signal strength and battery status; returns whether either changed."""
+        changed = (self.signal_strengths[shade.id], self.batteries[shade.id]) != (
+            shade.signal_strength, shade.battery)
+        self.signal_strengths[shade.id] = shade.signal_strength
+        self.batteries[shade.id] = shade.battery
         return changed
 
     # ------------------------------------------------------------ event stream
@@ -240,7 +248,7 @@ class PowerViewHub:
             moving = tracker.poll({}, self.clock())
         else:
             moving = tracker.poll(shade.positions, self.clock())
-            self._take_signal_strength(shade_id, shade.signal_strength)
+            self._take_reported(shade)
         if moving:
             self._poll_soon(shade_id)
         self._notify(shade_id)

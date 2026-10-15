@@ -29,6 +29,8 @@ TDBU = 154
 BOTTOM_UP = 271
 TOP_DOWN = 300
 TILT_ONLY = 400
+ON_BATTERY = 600
+"""A shade off mains power, its battery at medium."""
 SCENE = 216
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
@@ -46,6 +48,7 @@ def furnish(gateway: SimulatedGateway) -> None:
                       positions={P: 0.25})
     gateway.add_shade(TILT_ONLY, "Blind", room_id=66, capabilities=Capabilities.TILT_ONLY_180,
                       positions={T: 0.5}, signal_strength=None)
+    gateway.add_shade(ON_BATTERY, "Roller", room_id=66, power_type=0, battery_status=2)
     gateway.add_scene(SCENE, "Morning", room_id=65, members={TDBU: {P: 0.0, S: 0.0}})
 
 

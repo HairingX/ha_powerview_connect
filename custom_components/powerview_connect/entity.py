@@ -53,6 +53,11 @@ def shade_device(hub: PowerViewHub, shade: Shade) -> DeviceInfo:
     )
 
 
+def has_battery(shade: Shade) -> bool:
+    """Whether the shade reports a power type other than mains power, so it has a battery."""
+    return shade.power_type is not None and not shade.hard_wired
+
+
 class PowerViewEntity(Entity):
     """An entity of the gateway, available while the gateway answers."""
 

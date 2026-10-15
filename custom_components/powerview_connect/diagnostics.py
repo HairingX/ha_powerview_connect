@@ -51,6 +51,7 @@ def _shade(shade: Shade, tracker: ShadeTracker) -> dict[str, Any]:
         "firmware": shade.firmware,
         "room": shade.room_name,
         "signal_strength": shade.signal_strength,
+        "battery_status": shade.battery_status,
         "positions": {str(rail): value for rail, value in shade.positions.items()},
         "tracker": {
             "moving": tracker.moving,

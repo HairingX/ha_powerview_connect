@@ -77,6 +77,17 @@
           }
         }
       }
+    },
+    "sensor": {
+      "battery_level": {
+        "name": "Battery level",
+        "state": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "plugged_in": "Plugged in"
+        }
+      }
     }
   },
   "exceptions": {

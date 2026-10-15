@@ -107,6 +107,10 @@ and its history stays. Reconfigure refuses another home's gateway.
   and a **Signal strength** sensor: how well the gateway hears the shade, in dBm, closer to 0
   being stronger. It is a diagnostic, disabled by default: enable it on the shade's device. It is
   read with the whole home, and while the shade moves.
+- **Each shade off mains power** - one whose power type is not hard-wired - also has a
+  **Battery level** sensor (low, medium, high or plugged in, as the gateway reports it in steps)
+  and a **Battery** sensor that is on while the level is low. A hard-wired shade has neither: it
+  reports a battery level too, which means nothing for it.
 
 A top-down/bottom-up shade's covers mean what they do in Home Assistant's own PowerView
 integration:
@@ -227,8 +231,8 @@ automation:
   A shade that tilts as well as moves gets a cover for its rail only; a dual-overlapped shade a
   cover for its primary rail only.
 - Stop stops both rails of a top-down/bottom-up shade: the gateway stops a whole shade.
-- No battery sensor yet: a hard-wired shade reports the same battery number as a full battery
-  would, and what a battery shade reports has not been read from one.
+- The battery levels are those the Gen 3 API describes; they have not been read from a battery
+  shade yet. The gateway reports steps, not a percentage.
 - The gateway's estimate of how long a move takes is about half the real time, so it is not
   used.
 - Scenes are activated, not edited: create and change them in the PowerView app.

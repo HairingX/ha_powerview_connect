@@ -77,6 +77,17 @@
           }
         }
       }
+    },
+    "sensor": {
+      "battery_level": {
+        "name": "Batteriniveau",
+        "state": {
+          "low": "Lavt",
+          "medium": "Middel",
+          "high": "Højt",
+          "plugged_in": "Tilsluttet strøm"
+        }
+      }
     }
   },
   "exceptions": {

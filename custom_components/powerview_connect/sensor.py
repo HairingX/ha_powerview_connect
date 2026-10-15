@@ -1,4 +1,4 @@
-"""How well the gateway hears each shade."""
+"""How well the gateway hears each shade, and the battery of each shade that has one."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from homeassistant.components.sensor import (
 from homeassistant.const import SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from powerview_connect import Shade
+from powerview_connect import BatteryStatus, Shade
 
-from .entity import PowerViewShadeEntity
+from .entity import PowerViewShadeEntity, has_battery
 from .hub import PowerViewConfigEntry, PowerViewHub
 
 PARALLEL_UPDATES = 0
@@ -23,13 +23,18 @@ async def async_setup_entry(
     entry: PowerViewConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Add a signal strength sensor for each shade the gateway reports one for."""
+    """Add a signal strength sensor for each shade the gateway reports one for, and a battery
+    sensor for each shade not on mains power."""
     hub = entry.runtime_data
-    async_add_entities(
+    sensors: list[SensorEntity] = [
         PowerViewSignalStrength(hub, shade)
         for shade in hub.home.shades.values()
         if shade.signal_strength is not None
-    )
+    ]
+    sensors += [
+        PowerViewBatteryLevel(hub, shade) for shade in hub.home.shades.values() if has_battery(shade)
+    ]
+    async_add_entities(sensors)
 
 
 class PowerViewSignalStrength(PowerViewShadeEntity, SensorEntity):
@@ -50,3 +55,32 @@ class PowerViewSignalStrength(PowerViewShadeEntity, SensorEntity):
     def _update(self) -> None:
         super()._update()
         self._attr_native_value = self.hub.signal_strengths[self.shade.id]
+
+
+BATTERY_LEVELS: dict[BatteryStatus, str] = {
+    BatteryStatus.LOW: "low",
+    BatteryStatus.MEDIUM: "medium",
+    BatteryStatus.HIGH: "high",
+    BatteryStatus.PLUGGED_IN: "plugged_in",
+}
+"""The states of the battery level; an unknown status is shown as unknown."""
+
+
+class PowerViewBatteryLevel(PowerViewShadeEntity, SensorEntity):
+    """A shade's battery level, as the gateway reports it in steps."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = list(BATTERY_LEVELS.values())
+    _attr_translation_key = "battery_level"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, hub: PowerViewHub, shade: Shade) -> None:
+        """The battery level of `shade`."""
+        super().__init__(hub, shade)
+        self._attr_unique_id = f"{hub.unique_id}_{shade.id}_battery_level"
+        self._update()
+
+    def _update(self) -> None:
+        super()._update()
+        battery = self.hub.batteries[self.shade.id]
+        self._attr_native_value = BATTERY_LEVELS.get(battery) if battery is not None else None
