@@ -24,10 +24,10 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from powerview_connect import PowerViewClient
+from powerview_connect import Connection, PowerViewClient, PowerViewHub
 
 from custom_components.powerview_connect.const import DOMAIN
-from custom_components.powerview_connect.hub import PowerViewHub
+from custom_components.powerview_connect.runtime import PowerViewConfigEntry, PowerViewRuntime, timing_from
 
 from .conftest import until
 
@@ -53,7 +53,7 @@ pytestmark = [
 
 @pytest.fixture
 def read_only(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[PowerViewClient]]:
-    """Every client the integration makes reaches the real gateway, read-only."""
+    """Every client and hub the integration makes reaches the real gateway, read-only."""
     assert HOST is not None
     pytest_socket.enable_socket()
     pytest_socket.socket_allow_hosts([HOST.split(":")[0], "127.0.0.1"])
@@ -64,8 +64,13 @@ def read_only(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[PowerViewClient]
         made.append(client)
         return client
 
-    monkeypatch.setattr("custom_components.powerview_connect.hub.new_client", new_client)
-    monkeypatch.setattr("custom_components.powerview_connect.new_client", new_client)
+    def new_hub(hass: HomeAssistant, entry: PowerViewConfigEntry, host: str) -> PowerViewHub:
+        hub = PowerViewHub(async_get_clientsession(hass), host,
+                           timing=timing_from(entry.options), read_only=True)
+        made.append(hub.client)
+        return hub
+
+    monkeypatch.setattr("custom_components.powerview_connect.new_hub", new_hub)
     monkeypatch.setattr("custom_components.powerview_connect.config_flow.new_client", new_client)
     yield made
 
@@ -83,11 +88,11 @@ async def test_a_real_gateway_is_added_and_every_shade_is_a_cover(
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.LOADED
 
-    hub: PowerViewHub = entry.runtime_data
-    assert all(client.read_only for client in read_only)
-    await until(lambda: hub.stream_connected, timeout=15)
+    runtime: PowerViewRuntime = entry.runtime_data
+    assert read_only and all(client.read_only for client in read_only)
+    await until(lambda: runtime.hub.connection is Connection.CONNECTED, timeout=15)
     covers = hass.states.async_all("cover")
-    assert len(covers) >= len(hub.home.shades) > 0
+    assert len(covers) >= len(runtime.hub.shades) > 0
     assert all(state.state != "unavailable" for state in covers)
     for state in covers:
         print(f"  {state.entity_id:48} {state.state:8} {state.attributes.get('current_position')}")

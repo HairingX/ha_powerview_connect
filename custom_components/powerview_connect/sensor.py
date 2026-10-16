@@ -3,6 +3,8 @@ shade that has one."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -11,18 +13,30 @@ from homeassistant.components.sensor import (
 from homeassistant.const import SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from powerview_connect import BatteryStatus, Gateway, Shade
+from powerview_connect import BatteryStatus, Gateway
 
 from .entity import (
+    Members,
     PowerViewGatewayEntity,
     PowerViewShadeEntity,
-    add_entities,
-    gateways,
-    has_battery,
+    askable_gateways,
+    set_up_platform,
 )
-from .hub import PowerViewConfigEntry, PowerViewHub
+from .runtime import PowerViewConfigEntry, PowerViewRuntime
 
 PARALLEL_UPDATES = 0
+
+
+def _sensors(runtime: PowerViewRuntime, members: Members) -> Iterable[SensorEntity]:
+    sensors: list[SensorEntity] = [
+        PowerViewGatewayNetwork(runtime, gateway) for gateway in askable_gateways(runtime, members)]
+    for shade_id in sorted(members.shades):
+        shade = runtime.hub.shade(shade_id).shade
+        if shade.signal_strength is not None:
+            sensors.append(PowerViewSignalStrength(runtime, shade_id))
+        if shade.has_battery:
+            sensors.append(PowerViewBatteryLevel(runtime, shade_id))
+    return sensors
 
 
 async def async_setup_entry(
@@ -32,17 +46,7 @@ async def async_setup_entry(
 ) -> None:
     """Add a network sensor for each gateway, a signal strength sensor for each shade the gateway
     reports one for, and a battery sensor for each shade not on mains power."""
-    hub = entry.runtime_data
-    sensors: list[SensorEntity] = [PowerViewGatewayNetwork(hub, gateway) for gateway in gateways(hub)]
-    sensors += [
-        PowerViewSignalStrength(hub, shade)
-        for shade in hub.home.shades.values()
-        if shade.signal_strength is not None
-    ]
-    sensors += [
-        PowerViewBatteryLevel(hub, shade) for shade in hub.home.shades.values() if has_battery(shade)
-    ]
-    add_entities(hub, async_add_entities, sensors)
+    set_up_platform(entry, async_add_entities, _sensors)
 
 
 class PowerViewSignalStrength(PowerViewShadeEntity, SensorEntity):
@@ -54,15 +58,15 @@ class PowerViewSignalStrength(PowerViewShadeEntity, SensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, hub: PowerViewHub, shade: Shade) -> None:
-        """The signal strength of `shade`."""
-        super().__init__(hub, shade)
-        self._attr_unique_id = f"{hub.unique_id}_{shade.id}_signal_strength"
+    def __init__(self, runtime: PowerViewRuntime, shade_id: int) -> None:
+        """The signal strength of shade `shade_id`."""
+        super().__init__(runtime, shade_id)
+        self._attr_unique_id = f"{runtime.unique_id}_{shade_id}_signal_strength"
         self._update()
 
     def _update(self) -> None:
         super()._update()
-        self._attr_native_value = self.hub.signal_strengths[self.shade.id]
+        self._attr_native_value = self.shade_state.shade.signal_strength
 
 
 BATTERY_LEVELS: dict[BatteryStatus, str] = {
@@ -82,15 +86,15 @@ class PowerViewBatteryLevel(PowerViewShadeEntity, SensorEntity):
     _attr_translation_key = "battery_level"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, hub: PowerViewHub, shade: Shade) -> None:
-        """The battery level of `shade`."""
-        super().__init__(hub, shade)
-        self._attr_unique_id = f"{hub.unique_id}_{shade.id}_battery_level"
+    def __init__(self, runtime: PowerViewRuntime, shade_id: int) -> None:
+        """The battery level of shade `shade_id`."""
+        super().__init__(runtime, shade_id)
+        self._attr_unique_id = f"{runtime.unique_id}_{shade_id}_battery_level"
         self._update()
 
     def _update(self) -> None:
         super()._update()
-        battery = self.hub.batteries[self.shade.id]
+        battery = self.shade_state.shade.battery
         self._attr_native_value = BATTERY_LEVELS.get(battery) if battery is not None else None
 
 
@@ -101,12 +105,13 @@ class PowerViewGatewayNetwork(PowerViewGatewayEntity, SensorEntity):
     _attr_options = ["wired", "wifi"]
     _attr_translation_key = "network"
 
-    def __init__(self, hub: PowerViewHub, gateway: Gateway) -> None:
+    def __init__(self, runtime: PowerViewRuntime, gateway: Gateway) -> None:
         """The network sensor of `gateway`."""
-        super().__init__(hub, gateway, "network")
+        super().__init__(runtime, gateway, "network")
         self._update()
 
     def _update(self) -> None:
         super()._update()
-        wifi = self.status.wifi if self.status else None
+        state = self.gateway_state
+        wifi = state.status.wifi if state and state.status else None
         self._attr_native_value = None if wifi is None else ("wifi" if wifi else "wired")

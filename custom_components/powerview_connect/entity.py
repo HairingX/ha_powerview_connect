@@ -2,58 +2,53 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 
 from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from powerview_connect import Gateway, GatewayStatus, Shade, ShadeTracker
+from powerview_connect import (
+    Change,
+    ConnectionChanged,
+    Gateway,
+    GatewayState,
+    HomeChanged,
+    Shade,
+    ShadeState,
+    capability_name,
+)
 
 from .const import DOMAIN, MANUFACTURER
-from .hub import PowerViewHub
+from .runtime import PowerViewConfigEntry, PowerViewRuntime
 
 
-def gateway_identifier(hub: PowerViewHub, gateway: Gateway | None = None) -> tuple[str, str]:
-    """The device registry identifier of a gateway, the primary one by default."""
-    if gateway is None or gateway == hub.gateway:
-        return (DOMAIN, hub.unique_id)
-    return (DOMAIN, f"{hub.unique_id}_gateway_{gateway.serial}")
+def gateway_identifier(runtime: PowerViewRuntime, gateway: Gateway | None = None) -> tuple[str, str]:
+    """The device registry identifier of a gateway, the one the hub reaches by default."""
+    if gateway is None or gateway == runtime.hub.gateway:
+        return (DOMAIN, runtime.unique_id)
+    return (DOMAIN, f"{runtime.unique_id}_gateway_{gateway.serial}")
 
 
-def shade_identifier(hub: PowerViewHub, shade_id: int) -> tuple[str, str]:
+def shade_identifier(runtime: PowerViewRuntime, shade_id: int) -> tuple[str, str]:
     """The device registry identifier of a shade."""
-    return (DOMAIN, f"{hub.unique_id}_{shade_id}")
+    return (DOMAIN, f"{runtime.unique_id}_{shade_id}")
 
 
-def gateway_device(hub: PowerViewHub) -> DeviceInfo:
-    """The primary gateway as a device."""
-    gateway = hub.gateway
+def gateway_device(runtime: PowerViewRuntime, gateway: Gateway | None) -> DeviceInfo:
+    """A gateway as a device: the one the hub reaches, or an auxiliary one connected through it."""
     if gateway is None:
         return DeviceInfo(
-            identifiers={gateway_identifier(hub)},
-            manufacturer=MANUFACTURER,
-            name="PowerView Gateway",
-            model="PowerView Gen 3 Gateway",
-            configuration_url=f"{hub.client.base_url}/home",
+            identifiers={gateway_identifier(runtime)}, manufacturer=MANUFACTURER,
+            name="PowerView Gateway", model="PowerView Gen 3 Gateway",
+            configuration_url=f"{runtime.hub.client.base_url}/home",
         )
-    device = _gateway_details(hub, gateway)
-    device["configuration_url"] = f"{hub.client.base_url}/home"
-    return device
-
-
-def auxiliary_gateway_device(hub: PowerViewHub, gateway: Gateway) -> DeviceInfo:
-    """An auxiliary gateway as a device, connected through the primary gateway."""
-    device = _gateway_details(hub, gateway)
-    device["via_device_id"] = hub.gateway_device_id
-    return device
-
-
-def _gateway_details(hub: PowerViewHub, gateway: Gateway) -> DeviceInfo:
-    status = hub.gateway_states.get(gateway.serial)
-    return DeviceInfo(
-        identifiers={gateway_identifier(hub, gateway)},
+    state = runtime.hub.gateways.get(gateway.serial)
+    status = state.status if state else None
+    device = DeviceInfo(
+        identifiers={gateway_identifier(runtime, gateway)},
         manufacturer=MANUFACTURER,
         name=gateway.name,
         model=f"PowerView Gen 3 Gateway {gateway.model}" if gateway.model
@@ -62,60 +57,97 @@ def _gateway_details(hub: PowerViewHub, gateway: Gateway) -> DeviceInfo:
         hw_version=status.hardware_version if status else None,
         serial_number=gateway.serial,
     )
+    if gateway == runtime.hub.gateway:
+        device["configuration_url"] = f"{runtime.hub.client.base_url}/home"
+    else:
+        device["via_device_id"] = runtime.primary_device_id
+    return device
 
 
-def shade_device(hub: PowerViewHub, shade: Shade) -> DeviceInfo:
-    """A shade as a device, connected through the gateway."""
-    capability = shade.capability
-    kind = capability.name.replace("_", " ").title() if capability is not None else (
-        f"Capabilities {shade.capabilities}")
+def shade_device(runtime: PowerViewRuntime, shade: Shade) -> DeviceInfo:
+    """A shade as a device, connected through the gateway that serves it."""
     return DeviceInfo(
-        identifiers={shade_identifier(hub, shade.id)},
+        identifiers={shade_identifier(runtime, shade.id)},
         manufacturer=MANUFACTURER,
         name=shade.name,
-        model=f"{kind} (type {shade.type})",
+        model=f"{capability_name(shade.capabilities)} (type {shade.type})",
         sw_version=shade.firmware,
         serial_number=shade.serial,
         suggested_area=shade.room_name,
-        via_device_id=hub.via_device_id(shade.id),
+        via_device_id=runtime.via_device_id(shade.id),
     )
 
 
+@dataclass(frozen=True, slots=True)
+class Members:
+    """Which shades, scenes and gateways a platform is to add entities for."""
+
+    shades: frozenset[int]
+    scenes: frozenset[int]
+    gateways: frozenset[str]
+
+
+type Make = Callable[[PowerViewRuntime, Members], Iterable[Entity]]
+
+
 def add_entities(
-    hub: PowerViewHub, async_add_entities: AddConfigEntryEntitiesCallback,
+    runtime: PowerViewRuntime, async_add_entities: AddConfigEntryEntitiesCallback,
     entities: Iterable[Entity],
 ) -> None:
     """Add `entities`, noting their unique ids as ones the entry still has."""
     made = list(entities)
-    hub.unique_ids.update(entity.unique_id for entity in made if entity.unique_id)
+    runtime.unique_ids.update(entity.unique_id for entity in made if entity.unique_id)
     async_add_entities(made)
 
 
-def has_battery(shade: Shade) -> bool:
-    """Whether the shade reports a power type other than mains power, so it has a battery."""
-    return shade.power_type is not None and not shade.hard_wired
+def set_up_platform(
+    entry: PowerViewConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback, make: Make
+) -> None:
+    """Add a platform's entities for the home, and for what is added to it later."""
+    runtime = entry.runtime_data
+    hub = runtime.hub
+    add_entities(runtime, async_add_entities, make(runtime, Members(
+        frozenset(hub.shades), frozenset(scene.id for scene in hub.home.scenes),
+        frozenset(hub.gateways))))
+
+    @callback
+    def added(change: Change) -> None:
+        if isinstance(change, HomeChanged):
+            diff = change.diff
+            members = Members(diff.added_shades, diff.added_scenes, diff.added_gateways)
+            if members.shades or members.scenes or members.gateways:
+                add_entities(runtime, async_add_entities, make(runtime, members))
+
+    entry.async_on_unload(hub.subscribe(added))
 
 
 class PowerViewEntity(Entity):
-    """An entity of the gateway, available while the gateway answers."""
+    """An entity of the home, available while the primary gateway answers."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False
 
-    def __init__(self, hub: PowerViewHub) -> None:
-        """An entity of `hub`'s gateway."""
-        self.hub = hub
-        self._attr_available = hub.available
+    def __init__(self, runtime: PowerViewRuntime) -> None:
+        """An entity of `runtime`'s home."""
+        self.runtime = runtime
+        self.hub = runtime.hub
+        self._attr_available = self.hub.available
 
     async def async_added_to_hass(self) -> None:
-        """Follow the gateway's availability."""
-        self.async_on_remove(self.hub.async_listen(None, self._changed))
+        """Follow the connection to the gateway."""
+        self.async_on_remove(self.hub.subscribe(self._on_change))
+        self._update()
+
+    @callback
+    def _on_change(self, change: Change) -> None:
+        if isinstance(change, ConnectionChanged):
+            self._changed()
 
     def _update(self) -> None:
         self._attr_available = self.hub.available
 
     @callback
-    def _changed(self) -> None:
+    def _changed(self, *_: object) -> None:
         self._update()
         self.async_write_ha_state()
 
@@ -123,25 +155,27 @@ class PowerViewEntity(Entity):
 class PowerViewShadeEntity(PowerViewEntity):
     """An entity of one shade, available while the gateway answers and the shade is online."""
 
-    def __init__(self, hub: PowerViewHub, shade: Shade) -> None:
-        """An entity of `shade`."""
-        super().__init__(hub)
-        self.shade = shade
-        self._attr_device_info = shade_device(hub, shade)
-
-    @property
-    def tracker(self) -> ShadeTracker:
-        """The shade's motion."""
-        return self.hub.trackers[self.shade.id]
+    def __init__(self, runtime: PowerViewRuntime, shade_id: int) -> None:
+        """An entity of shade `shade_id`."""
+        self.shade_id = shade_id
+        self.shade_state = runtime.hub.shade(shade_id)
+        """The shade's state as last heard; kept once the home no longer has the shade."""
+        super().__init__(runtime)
+        self._attr_device_info = shade_device(runtime, self.shade_state.shade)
 
     async def async_added_to_hass(self) -> None:
-        """Follow the shade, and the gateway's availability."""
+        """Follow the shade, and the connection to the gateway."""
+        self.async_on_remove(self.hub.subscribe_shade(self.shade_id, self._shade_changed))
         await super().async_added_to_hass()
-        self.async_on_remove(self.hub.async_listen(self.shade.id, self._changed))
-        self._update()
+
+    @callback
+    def _shade_changed(self, state: ShadeState) -> None:
+        self.shade_state = state
+        self._changed()
 
     def _update(self) -> None:
-        self._attr_available = self.hub.available and self.tracker.online
+        self._attr_available = (self.hub.available and self.shade_state.online
+                                and self.shade_id in self.hub.home.shades)
 
 
 class PowerViewGatewayEntity(PowerViewEntity):
@@ -149,28 +183,30 @@ class PowerViewGatewayEntity(PowerViewEntity):
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, hub: PowerViewHub, gateway: Gateway, key: str) -> None:
+    def __init__(self, runtime: PowerViewRuntime, gateway: Gateway, key: str) -> None:
         """The `key` entity of `gateway`."""
-        super().__init__(hub)
-        self.gateway = gateway
-        self._attr_unique_id = f"{hub.unique_id}_gateway_{gateway.serial}_{key}"
-        self._attr_device_info = DeviceInfo(identifiers={gateway_identifier(hub, gateway)})
+        super().__init__(runtime)
+        self.serial = gateway.serial
+        self._attr_unique_id = f"{runtime.unique_id}_gateway_{gateway.serial}_{key}"
+        self._attr_device_info = DeviceInfo(identifiers={gateway_identifier(runtime, gateway)})
 
     @property
-    def status(self) -> GatewayStatus | None:
-        """What the gateway last reported of itself; None while it does not answer."""
-        return self.hub.gateway_states[self.gateway.serial]
+    def gateway_state(self) -> GatewayState | None:
+        """What the hub knows of the gateway, None once the home no longer has it."""
+        return self.hub.gateways.get(self.serial)
 
     async def async_added_to_hass(self) -> None:
         """Follow what the gateway reports."""
+        self.async_on_remove(self.hub.subscribe_gateway(self.serial, self._changed))
         await super().async_added_to_hass()
-        self.async_on_remove(self.hub.async_listen(self.gateway.serial, self._changed))
-        self._update()
 
     def _update(self) -> None:
-        self._attr_available = self.status is not None
+        state = self.gateway_state
+        self._attr_available = state is not None and state.reachable is True
 
 
-def gateways(hub: PowerViewHub) -> list[Gateway]:
-    """The gateways of the home that can be asked of their state."""
-    return [gateway for gateway in hub.home.gateways if gateway.serial in hub.gateway_clients]
+def askable_gateways(runtime: PowerViewRuntime, members: Members) -> list[Gateway]:
+    """The gateways among `members` that can be asked of their state."""
+    gateways = runtime.hub.gateways
+    return [gateways[serial].gateway for serial in sorted(members.gateways)
+            if serial in gateways and gateways[serial].askable]

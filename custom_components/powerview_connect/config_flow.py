@@ -20,7 +20,7 @@ from .const import (
     DEFAULT_REFRESH_MINUTES,
     DOMAIN,
 )
-from .hub import PowerViewConfigEntry, new_client
+from .runtime import PowerViewConfigEntry, new_client
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -29,42 +29,47 @@ overwrite with stale gateway data, so back-to-back top and bottom commands rever
 (home-assistant/core#122016). Its `cover.py` builds every top or bottom move from both
 `primary` and `secondary`.
 
-## The hub
+## The integration is a link
 
-One `PowerViewHub` per config entry holds the home as it was read at setup and a
-`ShadeTracker` (from the library) per shade. It owns three things:
+Everything about PowerView - the event stream, reading moving shades, reading the home, each
+gateway's state, which covers a shade has and how far each is open - is the library's
+`PowerViewHub` and `covers`. The integration turns the hub's state into devices and entities,
+and Home Assistant's actions into the hub's commands. It knows nothing of the gateway's
+protocol.
 
-- **The event stream**, a background task that reopens it after it ends or breaks, with a
-  growing wait. Each time it opens, the whole home is read, to catch up on what happened while
-  it was closed. `motion-started` starts a shade's move and its reads; `motion-stopped` ends it;
-  `shade-online` and `shade-offline` set the shade's availability.
-- **Reads of moving shades**, one timer per shade, about once a second, at most three requests
-  at a time. The tracker decides when a move has ended; a read that fails still lets its
-  timeouts end it.
-- **Commands**, sent for one rail, or both through the action. The tracker takes the command,
-  so the cover shows opening or closing before the gateway's event arrives.
-- **Gateway states**, each gateway asked once a minute with `GET /gateway`, all at once: the
-  primary through the entry's client, an auxiliary one through a read-only client of the address
-  `/home` lists for it, so nothing can reach a shade through it. A gateway that does not answer
-  is kept as None; one listed without an address is not asked.
-
-The tracker's clock is the hub's `clock`, `time.monotonic` unless a test sets another.
+- **Setup** makes the hub (`runtime.new_hub`, with the entry's options as its `Timing`) and
+  loads the home; a gateway that does not answer makes the entry retry later. It registers
+  each gateway's device, adds the platforms, and runs the hub's `run` as the entry's
+  background task, which Home Assistant cancels when the entry unloads: nothing the hub does
+  outlives the entry.
+- **Entities** subscribe to their shade or gateway in `async_added_to_hass`, and to the
+  connection, and set `_attr_` values from the state they are given; nothing is polled by
+  Home Assistant. A shade entity is available while the hub is and the shade is online.
+- **Commands** go to the hub; an error the gateway reports becomes a `HomeAssistantError`.
+- **The home changing**: a shade, scene or gateway added to it gets its device and entities
+  without a reload; one removed, once the hub has missed it in two reads in a row, has its
+  device or scene removed; a shade renamed, moved to another room or gateway, or with new
+  firmware has its device updated. A gateway's hardware and firmware follow what it reports.
+- **Time**: the hub keeps time by `runtime.new_clock`, the event loop's own. The tests replace
+  it with the library's `ManualClock`, so time passes only when a test advances it.
 
 ## Setup, availability and change
 
-- Setup reads `/home`; a gateway that does not answer makes the entry retry later.
-- The gateway is unavailable, and every entity with it, while reading the home or opening the
-  stream fails; this is logged once when it happens and once when it ends.
-- The whole home is read every 10 minutes (an option). Positions of shades not moving are
-  taken; when the shades or scenes are not those set up, the entry reloads. Setup removes the
-  devices of shades the home no longer has.
+- The hub is unavailable, and every entity with it, while the primary gateway does not
+  answer. A stream that is being reopened, or one that is silent because nothing moves, does
+  not make it so. The library logs once when the gateway stops answering and once when it
+  answers again.
+- The whole home is read every 10 minutes (an option); a moving shade is read every second
+  (an option).
+- Setup removes the devices of shades and gateways the home no longer has, and the entities
+  this version no longer makes.
 
 ## The log
 
-The hub's logger has one filter, which replaces each gateway's serial number and each shade's
-serial number and Bluetooth name with a name for it, in the message and in the errors raised
-for a command. Addresses are kept: they are on the home's own network, and they show which
-gateway is on which network. The replacements are learnt when a home is read.
+The integration logs through the library's `powerview_connect` logger, which the manifest
+names, so debug logging from the integration's menu covers it. It holds every event and every
+request with its time, names shades and gateways by id and name, and leaves serial numbers and
+Bluetooth names out.
 
 ## Devices and entities
 
@@ -81,8 +86,6 @@ gateway is on which network. The replacements are learnt when a home is read.
   top-down, one for the primary rail otherwise. Vanes are a cover's tilt: the only rail's for a
   shade that tilts, the front's for a dual-overlapped one, and the whole cover of a tilt-only
   shade. Vertical shades are curtains. Only the top-down/bottom-up shade has been measured.
-- The covers set `_attr_` values whenever the hub tells them their shade changed; nothing is
-  polled by Home Assistant.
 - Scenes belong to the gateway's device.
 - Each shade has an Identify button, a jog. The gateway takes no other motion: a move to either
   of a shade's two favorite positions is refused with HTTP 400, so there are no buttons for them.
@@ -95,6 +98,6 @@ gateway is on which network. The replacements are learnt when a home is read.
 
 ## Dependencies
 
-`powerview_connect` holds everything about the gateway: the client, the parsing, the motion
-tracker and a simulated gateway that the tests run the integration against. It uses Home
-Assistant's shared aiohttp session.
+`powerview_connect` holds everything about the gateway: the hub, the covers, the client, the
+parsing, the motion tracker, and the simulated gateway and manual clock the tests run the
+integration against. It uses Home Assistant's shared aiohttp session.

@@ -15,11 +15,11 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import service
 from homeassistant.helpers.typing import ConfigType
-from powerview_connect import PowerViewError
+from powerview_connect import Change, GatewayChanged, HomeChanged, PowerViewError
 
 from .const import ATTR_BOTTOM, ATTR_TOP, DOMAIN, SERVICE_SET_POSITIONS
-from .entity import auxiliary_gateway_device, gateway_device, gateway_identifier, shade_identifier
-from .hub import PowerViewConfigEntry, PowerViewHub, new_client
+from .entity import gateway_device, gateway_identifier, shade_device, shade_identifier
+from .runtime import PowerViewConfigEntry, PowerViewRuntime, new_hub
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR, Platform.BUTTON, Platform.COVER, Platform.SCENE, Platform.SENSOR
@@ -53,40 +53,31 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) -> bool:
-    """Read the gateway's home, add its devices and entities, and start listening to it."""
-    client = new_client(hass, entry.data[CONF_HOST])
+    """Read the gateway's home, add its devices and entities, and start following it."""
+    hub = new_hub(hass, entry, entry.data[CONF_HOST])
     try:
-        home = await client.get_home()
+        await hub.load()
     except PowerViewError as err:
         raise ConfigEntryNotReady(
             translation_domain=DOMAIN,
             translation_key="cannot_connect",
-            translation_placeholders={"host": client.host},
+            translation_placeholders={"host": hub.client.host},
         ) from err
-    hub = PowerViewHub(hass, entry, client, home)
-    entry.runtime_data = hub
-    await hub.async_refresh_gateways()
+    runtime = PowerViewRuntime(hub, entry.unique_id or hub.client.host)
+    entry.runtime_data = runtime
     registry = dr.async_get(hass)
-    # The gateways first, as each shade's device is connected through the one serving it.
-    hub.gateway_device_id = registry.async_get_or_create(
-        config_entry_id=entry.entry_id, **gateway_device(hub)
-    ).id
-    if hub.gateway is not None:
-        hub.gateway_device_ids[hub.gateway.serial] = hub.gateway_device_id
-    for gateway in home.gateways:
-        if gateway != hub.gateway:
-            hub.gateway_device_ids[gateway.serial] = registry.async_get_or_create(
-                config_entry_id=entry.entry_id, **auxiliary_gateway_device(hub, gateway)
-            ).id
+    _register_gateways(registry, entry)
     _remove_stale_devices(registry, entry)
+    # Devices follow the home before the platforms add entities for what was added to it.
+    entry.async_on_unload(hub.subscribe(lambda change: _follow(hass, entry, change)))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _remove_lost_entities(hass, entry)
-    hub.async_start()
+    entry.async_create_background_task(hass, hub.run(), f"{DOMAIN} {entry.title}")
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) -> bool:
-    """Unload the entities; the entry stops the listening and polling itself."""
+    """Unload the entities; Home Assistant cancels the hub's task with the entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
@@ -97,9 +88,67 @@ async def async_remove_config_entry_device(
     return not device.identifiers & _current_identifiers(entry.runtime_data)
 
 
-def _current_identifiers(hub: PowerViewHub) -> set[tuple[str, str]]:
-    return {gateway_identifier(hub, gateway) for gateway in hub.home.gateways} | {
-        gateway_identifier(hub)} | {shade_identifier(hub, shade_id) for shade_id in hub.home.shades}
+def _current_identifiers(runtime: PowerViewRuntime) -> set[tuple[str, str]]:
+    hub = runtime.hub
+    return {gateway_identifier(runtime, gateway) for gateway in hub.home.gateways} | {
+        gateway_identifier(runtime)} | {shade_identifier(runtime, shade_id) for shade_id in hub.shades}
+
+
+@callback
+def _register_gateways(registry: dr.DeviceRegistry, entry: PowerViewConfigEntry) -> None:
+    """Register each gateway's device, the one the hub reaches first, as the others are
+    connected through it."""
+    runtime = entry.runtime_data
+    hub = runtime.hub
+    runtime.primary_device_id = registry.async_get_or_create(
+        config_entry_id=entry.entry_id, **gateway_device(runtime, hub.gateway)).id
+    for state in hub.gateways.values():
+        gateway = state.gateway
+        if gateway == hub.gateway:
+            runtime.device_ids[gateway.serial] = runtime.primary_device_id
+        else:
+            runtime.device_ids[gateway.serial] = registry.async_get_or_create(
+                config_entry_id=entry.entry_id, **gateway_device(runtime, gateway)).id
+
+
+@callback
+def _follow(hass: HomeAssistant, entry: PowerViewConfigEntry, change: Change) -> None:
+    """Keep the devices as the home is: added, changed and removed shades and gateways."""
+    runtime = entry.runtime_data
+    registry = dr.async_get(hass)
+    match change:
+        case HomeChanged(_, diff):
+            if diff.added_gateways or diff.changed_gateways:
+                _register_gateways(registry, entry)
+            for shade_id in diff.changed_shades:
+                shade = runtime.hub.shade(shade_id).shade
+                device = registry.async_get_or_create(
+                    config_entry_id=entry.entry_id,
+                    identifiers={shade_identifier(runtime, shade_id)})
+                # A name the user gave the device is kept apart, and still shown.
+                registry.async_update_device(
+                    device.id, name=shade.name, sw_version=shade.firmware,
+                    model=shade_device(runtime, shade).get("model"),
+                    via_device_id=runtime.via_device_id(shade_id))
+            if diff.removed_shades or diff.removed_gateways or diff.removed_scenes:
+                _remove_stale_devices(registry, entry)
+                _remove_scenes(hass, entry, diff.removed_scenes)
+        case GatewayChanged(state) if state.status is not None:
+            # A gateway is asked only once the home that lists it has given it a device.
+            registry.async_update_device(
+                runtime.device_ids[state.gateway.serial],
+                hw_version=state.status.hardware_version, sw_version=state.status.firmware)
+        case _:
+            pass
+
+
+@callback
+def _remove_scenes(hass: HomeAssistant, entry: PowerViewConfigEntry, scene_ids: frozenset[int]) -> None:
+    registry = er.async_get(hass)
+    unique_ids = {f"{entry.runtime_data.unique_id}_scene_{scene_id}" for scene_id in scene_ids}
+    for found in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if found.unique_id in unique_ids:
+            registry.async_remove(found.entity_id)
 
 
 @callback
@@ -113,7 +162,7 @@ def _remove_lost_entities(hass: HomeAssistant, entry: PowerViewConfigEntry) -> N
 
 @callback
 def _remove_stale_devices(registry: dr.DeviceRegistry, entry: PowerViewConfigEntry) -> None:
-    """Remove the devices of shades the home no longer has."""
+    """Remove the devices of shades and gateways the home no longer has."""
     current = _current_identifiers(entry.runtime_data)
     for device in dr.async_entries_for_config_entry(registry, entry.entry_id):
         if not device.identifiers & current:

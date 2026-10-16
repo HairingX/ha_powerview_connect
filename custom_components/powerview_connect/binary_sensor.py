@@ -3,22 +3,34 @@ that has one is low."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.binary_sensor.const import BinarySensorDeviceClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from powerview_connect import BatteryStatus, Gateway, Shade
+from powerview_connect import Gateway
 
 from .entity import (
+    Members,
     PowerViewGatewayEntity,
     PowerViewShadeEntity,
-    add_entities,
-    gateways,
-    has_battery,
+    askable_gateways,
+    set_up_platform,
 )
-from .hub import PowerViewConfigEntry, PowerViewHub
+from .runtime import PowerViewConfigEntry, PowerViewRuntime
 
 PARALLEL_UPDATES = 0
+
+
+def _sensors(runtime: PowerViewRuntime, members: Members) -> Iterable[BinarySensorEntity]:
+    sensors: list[BinarySensorEntity] = []
+    for gateway in askable_gateways(runtime, members):
+        sensors += [PowerViewGatewayConnection(runtime, gateway),
+                    PowerViewGatewayInternet(runtime, gateway)]
+    sensors += [PowerViewLowBattery(runtime, shade_id) for shade_id in sorted(members.shades)
+                if runtime.hub.shade(shade_id).shade.has_battery]
+    return sensors
 
 
 async def async_setup_entry(
@@ -28,14 +40,7 @@ async def async_setup_entry(
 ) -> None:
     """Add a connection and an internet sensor for each gateway, and a low battery sensor for
     each shade not on mains power."""
-    hub = entry.runtime_data
-    sensors: list[BinarySensorEntity] = []
-    for gateway in gateways(hub):
-        sensors += [PowerViewGatewayConnection(hub, gateway), PowerViewGatewayInternet(hub, gateway)]
-    sensors += [
-        PowerViewLowBattery(hub, shade) for shade in hub.home.shades.values() if has_battery(shade)
-    ]
-    add_entities(hub, async_add_entities, sensors)
+    set_up_platform(entry, async_add_entities, _sensors)
 
 
 class PowerViewLowBattery(PowerViewShadeEntity, BinarySensorEntity):
@@ -43,17 +48,15 @@ class PowerViewLowBattery(PowerViewShadeEntity, BinarySensorEntity):
 
     _attr_device_class = BinarySensorDeviceClass.BATTERY
 
-    def __init__(self, hub: PowerViewHub, shade: Shade) -> None:
-        """The low battery sensor of `shade`."""
-        super().__init__(hub, shade)
-        self._attr_unique_id = f"{hub.unique_id}_{shade.id}_battery_low"
+    def __init__(self, runtime: PowerViewRuntime, shade_id: int) -> None:
+        """The low battery sensor of shade `shade_id`."""
+        super().__init__(runtime, shade_id)
+        self._attr_unique_id = f"{runtime.unique_id}_{shade_id}_battery_low"
         self._update()
 
     def _update(self) -> None:
         super()._update()
-        battery = self.hub.batteries[self.shade.id]
-        self._attr_is_on = None if battery in (None, BatteryStatus.UNKNOWN) else (
-            battery is BatteryStatus.LOW)
+        self._attr_is_on = self.shade_state.shade.battery_low
 
 
 class PowerViewGatewayConnection(PowerViewGatewayEntity, BinarySensorEntity):
@@ -62,15 +65,16 @@ class PowerViewGatewayConnection(PowerViewGatewayEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_translation_key = "connection"
 
-    def __init__(self, hub: PowerViewHub, gateway: Gateway) -> None:
+    def __init__(self, runtime: PowerViewRuntime, gateway: Gateway) -> None:
         """The connection sensor of `gateway`."""
-        super().__init__(hub, gateway, "connection")
+        super().__init__(runtime, gateway, "connection")
         self._update()
 
     def _update(self) -> None:
-        # Always available: a gateway that does not answer is what it reports.
-        self._attr_available = True
-        self._attr_is_on = self.status is not None
+        # Available while the gateway is known: not answering is what it reports.
+        state = self.gateway_state
+        self._attr_available = state is not None
+        self._attr_is_on = None if state is None or state.reachable is None else state.reachable
 
 
 class PowerViewGatewayInternet(PowerViewGatewayEntity, BinarySensorEntity):
@@ -79,11 +83,13 @@ class PowerViewGatewayInternet(PowerViewGatewayEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_translation_key = "internet"
 
-    def __init__(self, hub: PowerViewHub, gateway: Gateway) -> None:
+    def __init__(self, runtime: PowerViewRuntime, gateway: Gateway) -> None:
         """The internet sensor of `gateway`."""
-        super().__init__(hub, gateway, "internet")
+        super().__init__(runtime, gateway, "internet")
         self._update()
 
     def _update(self) -> None:
         super()._update()
-        self._attr_is_on = self.status.internet_connected if self.status else None
+        state = self.gateway_state
+        status = state.status if state else None
+        self._attr_is_on = status.internet_connected if status else None

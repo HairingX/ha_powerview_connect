@@ -13,12 +13,12 @@ from collections.abc import AsyncIterator, Callable, Iterator
 import pytest
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, State
-from powerview_connect import Capabilities, Rail
-from powerview_connect.testing import SimulatedGateway
+from powerview_connect import Capabilities, Connection, Rail
+from powerview_connect.testing import ManualClock, SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.powerview_connect.const import DOMAIN
-from custom_components.powerview_connect.hub import PowerViewHub
+from custom_components.powerview_connect.runtime import PowerViewRuntime
 
 SERIAL = "SIMULATED-0001"
 """The simulated primary gateway's serial number, which is the entry's unique id."""
@@ -52,22 +52,6 @@ def furnish(gateway: SimulatedGateway) -> None:
     gateway.add_scene(SCENE, "Morning", room_id=65, members={TDBU: {P: 0.0, S: 0.0}})
 
 
-class FakeClock:
-    """A monotonic clock that moves only when a test advances it."""
-
-    def __init__(self) -> None:
-        """A clock at 1000 s."""
-        self.now = 1000.0
-
-    def __call__(self) -> float:
-        """The time, in seconds."""
-        return self.now
-
-    def advance(self, seconds: float) -> None:
-        """Move the clock on."""
-        self.now += seconds
-
-
 def state(hass: HomeAssistant, entity_id: str) -> State:
     """The state of `entity_id`, which must exist."""
     found = hass.states.get(entity_id)
@@ -80,6 +64,22 @@ async def until(condition: Callable[[], bool], timeout: float = 5.0) -> None:
     async with asyncio.timeout(timeout):
         while not condition():
             await asyncio.sleep(0.01)
+
+
+async def tick(clock: ManualClock, seconds: float = 1.0) -> None:
+    """Let `seconds` pass on the hub's clock, a little at a time, so each read can answer."""
+    for _ in range(max(1, round(seconds / 0.5))):
+        await clock.advance(0.5)
+        await asyncio.sleep(0.02)
+
+
+async def tick_until(clock: ManualClock, condition: Callable[[], bool], limit: float = 60.0) -> None:
+    """Let time pass on the hub's clock until `condition` holds."""
+    for _ in range(round(limit / 0.5)):
+        if condition():
+            return
+        await tick(clock, 0.5)
+    assert condition()
 
 
 @pytest.fixture(autouse=True)
@@ -100,10 +100,15 @@ def no_deprecated_usage(caplog: pytest.LogCaptureFixture) -> Iterator[None]:
     assert reports == []
 
 
+@pytest.fixture
+def clock() -> ManualClock:
+    return ManualClock()
+
+
 @pytest.fixture(autouse=True)
-def quick_reconnect(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The event stream is reopened at once, rather than after seconds."""
-    monkeypatch.setattr("custom_components.powerview_connect.hub.SSE_BACKOFF", (0.05,))
+def hub_clock(monkeypatch: pytest.MonkeyPatch, clock: ManualClock) -> None:
+    """The hub keeps time by the test's clock, which moves only when the test advances it."""
+    monkeypatch.setattr("custom_components.powerview_connect.runtime.new_clock", lambda: clock)
 
 
 @pytest.fixture
@@ -135,22 +140,17 @@ def config_entry(gateway: SimulatedGateway) -> MockConfigEntry:
 
 
 @pytest.fixture
-def clock() -> FakeClock:
-    return FakeClock()
-
-
-@pytest.fixture
 async def loaded(
-    hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway, clock: FakeClock
-) -> AsyncIterator[PowerViewHub]:
-    """The config entry, set up and listening to the event stream; unloaded after the test."""
+    hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway
+) -> AsyncIterator[PowerViewRuntime]:
+    """The config entry, set up and following the home; unloaded after the test."""
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
-    hub: PowerViewHub = config_entry.runtime_data
-    hub.clock = clock
-    await gateway.wait_for_stream()
-    await until(lambda: hub.stream_connected)
-    yield hub
+    runtime: PowerViewRuntime = config_entry.runtime_data
+    # The stream is open and every gateway has been asked once.
+    await until(lambda: runtime.hub.connection is Connection.CONNECTED and all(
+        state.reachable is not None for state in runtime.hub.gateways.values() if state.askable))
+    yield runtime
     await hass.config_entries.async_unload(config_entry.entry_id)
     await hass.async_block_till_done()

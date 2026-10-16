@@ -70,7 +70,7 @@ rules:
   docs-use-cases: done
   dynamic-devices:
     status: done
-    comment: When the home's shades or scenes change, the next read of the home reloads the entry to add them.
+    comment: A shade, scene or gateway added to the home gets its device and entities at the next read of the home, without a reload.
   entity-category:
     status: done
     comment: A shade's signal strength is a diagnostic; covers and scenes are primary entities.
@@ -87,7 +87,7 @@ rules:
     comment: Nothing the gateway reports needs the user to act outside the config flow.
   stale-devices:
     status: done
-    comment: A shade the home no longer has loses its device when the entry sets up, which it does when the shades change.
+    comment: A shade or gateway the home no longer has loses its device once two reads of the home in a row miss it, and at setup.
 
   # Platinum
   async-dependency: done

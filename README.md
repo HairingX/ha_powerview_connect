@@ -157,9 +157,13 @@ moves:
   the stop event comes late or not at all.
 - **Every minute**, each gateway is asked of its own state, auxiliary ones at their own
   address: only `GET /gateway`, which moves nothing.
-- **Every 10 minutes**, the whole home is read, in case an event was missed. When the shades or
-  scenes have changed, the entry reloads to add or remove them.
-- When the stream breaks, it is reopened, and the whole home is read again.
+- **Every 10 minutes**, the whole home is read, in case an event was missed. A shade, scene or
+  gateway added to the home is added at once, without a reload. One that is gone is removed
+  only when two reads in a row miss it, so a gateway that answers incompletely while it starts
+  up removes nothing. A renamed shade, or one moved to another room or gateway, keeps its
+  device, which takes the new name; a name you gave the device yourself stays.
+- When the stream breaks, it is reopened, and the whole home is read again. The stream is
+  silent while nothing moves; the entities stay available meanwhile.
 
 ## Examples
 
