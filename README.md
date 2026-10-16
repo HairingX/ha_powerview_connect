@@ -228,8 +228,8 @@ automation:
 - **Download diagnostics** from the integration's menu: each shade's kind, type, firmware,
   positions and motion, and whether the event stream is open. The gateway's address, serial
   numbers and Bluetooth names are left out.
-- **Enable debug logging** from the same menu to log the integration and the library, every
-  event the gateway sends included.
+- **Enable debug logging** from the same menu to log every event the gateway sends, and every
+  request to it with how long it took.
 
 ## Known limits
 
