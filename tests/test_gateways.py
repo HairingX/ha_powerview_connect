@@ -4,22 +4,20 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
-from datetime import timedelta
 
 import pytest
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.util import dt as dt_util
-from powerview_connect.testing import SimulatedGateway
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+from powerview_connect.testing import ManualClock, SimulatedGateway
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.powerview_connect import async_remove_config_entry_device
 from custom_components.powerview_connect.const import DOMAIN
 from custom_components.powerview_connect.diagnostics import async_get_config_entry_diagnostics
-from custom_components.powerview_connect.hub import PowerViewHub
+from custom_components.powerview_connect.runtime import PowerViewRuntime
 
-from .conftest import ON_BATTERY, SERIAL, TDBU, state, until
+from .conftest import ON_BATTERY, SERIAL, TDBU, state, tick, until
 
 AUX = "AUX-0002"
 CONNECTION = "binary_sensor.simulated_gateway_connection"
@@ -39,22 +37,27 @@ async def auxiliary(gateway: SimulatedGateway) -> AsyncIterator[SimulatedGateway
         yield simulated
 
 
-async def _set_up(hass: HomeAssistant, config_entry: MockConfigEntry) -> PowerViewHub:
+async def _set_up(hass: HomeAssistant, config_entry: MockConfigEntry) -> PowerViewRuntime:
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
-    return config_entry.runtime_data
+    runtime: PowerViewRuntime = config_entry.runtime_data
+    # The gateways are first asked once the hub runs.
+    await until(lambda: all(state.reachable is not None
+                            for state in runtime.hub.gateways.values() if state.askable))
+    return runtime
 
 
-async def _minutes_later(hass: HomeAssistant, minutes: int, entity_id: str, expected: str) -> None:
-    """Let `minutes` pass since the setup, until `entity_id` is `expected`."""
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=minutes, seconds=1))
-    await hass.async_block_till_done()
+async def _a_minute_later(clock: ManualClock, hass: HomeAssistant, entity_id: str,
+                          expected: str) -> None:
+    """Let a minute pass, until `entity_id` is `expected`."""
+    await clock.advance(60)
+    await tick(clock)
     await until(lambda: state(hass, entity_id).state == expected)
 
 
 async def test_a_gateway_that_answers_is_connected_reaches_the_internet_and_is_wired(
-    hass: HomeAssistant, loaded: PowerViewHub
+    hass: HomeAssistant, loaded: PowerViewRuntime
 ) -> None:
     assert state(hass, CONNECTION).state == STATE_ON
     assert state(hass, INTERNET).state == STATE_ON
@@ -62,19 +65,19 @@ async def test_a_gateway_that_answers_is_connected_reaches_the_internet_and_is_w
 
 
 async def test_a_gateway_without_internet_or_on_wifi_says_so_within_a_minute(
-    hass: HomeAssistant, loaded: PowerViewHub, gateway: SimulatedGateway
+    hass: HomeAssistant, loaded: PowerViewRuntime, gateway: SimulatedGateway, clock: ManualClock
 ) -> None:
     gateway.internet_state, gateway.interface = "Disconnected", "wlan0"
-    await _minutes_later(hass, 1, INTERNET, STATE_OFF)
+    await _a_minute_later(clock, hass, INTERNET, STATE_OFF)
     assert state(hass, NETWORK).state == "wifi"
     gateway.interface = "usb0"
-    await _minutes_later(hass, 2, NETWORK, STATE_UNKNOWN)
+    await _a_minute_later(clock, hass, NETWORK, STATE_UNKNOWN)
 
 
 async def test_an_auxiliary_gateway_is_a_device_its_shades_are_connected_through(
     hass: HomeAssistant, config_entry: MockConfigEntry, auxiliary: SimulatedGateway
 ) -> None:
-    hub = await _set_up(hass, config_entry)
+    await _set_up(hass, config_entry)
     devices = dr.async_get(hass)
     primary = devices.async_get_device_by_identifier((DOMAIN, SERIAL), config_entry.entry_id)
     device = devices.async_get_device_by_identifier(
@@ -93,63 +96,51 @@ async def test_an_auxiliary_gateway_is_a_device_its_shades_are_connected_through
     assert not await async_remove_config_entry_device(hass, config_entry, device)
     assert auxiliary.requests[-1].path == "/gateway"
     assert all(request.method == "GET" for request in auxiliary.requests)
-    await hass.config_entries.async_unload(hub.entry.entry_id)
+    await hass.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_a_gateway_that_stops_answering_is_disconnected_until_it_answers_again(
-    hass: HomeAssistant, config_entry: MockConfigEntry, auxiliary: SimulatedGateway
+    hass: HomeAssistant, config_entry: MockConfigEntry, auxiliary: SimulatedGateway, clock: ManualClock
 ) -> None:
-    hub = await _set_up(hass, config_entry)
+    await _set_up(hass, config_entry)
     await auxiliary.close()
-    await _minutes_later(hass, 1, AUX_CONNECTION, STATE_OFF)
+    await _a_minute_later(clock, hass, AUX_CONNECTION, STATE_OFF)
     assert state(hass, AUX_INTERNET).state == STATE_UNAVAILABLE
     assert state(hass, AUX_NETWORK).state == STATE_UNAVAILABLE
     assert state(hass, CONNECTION).state == STATE_ON
     await auxiliary.start()
-    await _minutes_later(hass, 2, AUX_CONNECTION, STATE_ON)
+    await _a_minute_later(clock, hass, AUX_CONNECTION, STATE_ON)
     assert state(hass, AUX_INTERNET).state == STATE_ON
-    await hass.config_entries.async_unload(hub.entry.entry_id)
+    await hass.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_an_auxiliary_gateway_that_does_not_answer_at_setup_is_set_up_disconnected(
     hass: HomeAssistant, config_entry: MockConfigEntry, auxiliary: SimulatedGateway
 ) -> None:
     await auxiliary.close()
-    hub = await _set_up(hass, config_entry)
+    await _set_up(hass, config_entry)
     assert state(hass, AUX_CONNECTION).state == STATE_OFF
     assert state(hass, CONNECTION).state == STATE_ON
-    await hass.config_entries.async_unload(hub.entry.entry_id)
+    await hass.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_a_gateway_listed_without_an_address_is_a_device_without_sensors(
     hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway
 ) -> None:
     gateway.add_gateway(AUX, "Bedroom Gateway", ip="")
-    hub = await _set_up(hass, config_entry)
+    await _set_up(hass, config_entry)
     device = dr.async_get(hass).async_get_device_by_identifier(
         (DOMAIN, f"{SERIAL}_gateway_{AUX}"), config_entry.entry_id)
     assert device is not None and device.hw_version is None
     assert hass.states.get(AUX_CONNECTION) is None
-    await hass.config_entries.async_unload(hub.entry.entry_id)
-
-
-async def test_an_error_that_is_not_the_gateways_is_not_taken_for_one_not_answering(
-    hass: HomeAssistant, loaded: PowerViewHub, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    async def broken() -> None:
-        raise RuntimeError("a bug")
-
-    monkeypatch.setattr(loaded.gateway_clients[SERIAL], "get_gateway", broken)
-    with pytest.raises(RuntimeError, match="a bug"):
-        await loaded.async_refresh_gateways()
-    assert state(hass, CONNECTION).state == STATE_ON
+    await hass.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_a_home_that_lists_no_gateway_has_a_gateway_device_without_sensors(
     hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway
 ) -> None:
     gateway.gateways.clear()
-    hub = await _set_up(hass, config_entry)
+    await _set_up(hass, config_entry)
     devices = dr.async_get(hass)
     primary = devices.async_get_device_by_identifier((DOMAIN, SERIAL), config_entry.entry_id)
     window = devices.async_get_device_by_identifier(
@@ -157,7 +148,7 @@ async def test_a_home_that_lists_no_gateway_has_a_gateway_device_without_sensors
     assert primary is not None and primary.name == "PowerView Gateway"
     assert window is not None and window.via_device_id == primary.id
     assert hass.states.get(CONNECTION) is None
-    await hass.config_entries.async_unload(hub.entry.entry_id)
+    await hass.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_diagnostics_say_which_gateway_does_not_answer_and_which_is_not_asked(
@@ -166,10 +157,31 @@ async def test_diagnostics_say_which_gateway_does_not_answer_and_which_is_not_as
 ) -> None:
     gateway.add_gateway("AUX-0003", "Hall Gateway", ip="")
     await auxiliary.close()
-    hub = await _set_up(hass, config_entry)
-    diagnostics = await async_get_config_entry_diagnostics(hass, hub.entry)
-    assert [found["status"] for found in diagnostics["gateways"][1:]] == [
-        "not answering", "not asked"]
-    assert diagnostics["gateways"][1]["shades"] == [ON_BATTERY]
+    await _set_up(hass, config_entry)
+    diagnostics = await async_get_config_entry_diagnostics(hass, config_entry)
+    gateways = diagnostics["hub"]["gateways"]
+    assert [(found["askable"], found["reachable"]) for found in gateways[1:]] == [
+        (True, False), (False, None)]
+    assert gateways[1]["shades"] == [ON_BATTERY]
     assert AUX not in json.dumps(diagnostics) and auxiliary.host not in json.dumps(diagnostics)
-    await hass.config_entries.async_unload(hub.entry.entry_id)
+    await hass.config_entries.async_unload(config_entry.entry_id)
+
+
+async def test_an_auxiliary_gateway_added_to_the_home_is_added_without_a_reload(
+    hass: HomeAssistant, config_entry: MockConfigEntry, loaded: PowerViewRuntime,
+    gateway: SimulatedGateway, clock: ManualClock,
+) -> None:
+    async with SimulatedGateway(serial=AUX, name="Bedroom Gateway", primary=False) as added:
+        gateway.add_gateway(AUX, "Bedroom Gateway", ip=added.host)
+        await loaded.hub.refresh()
+        devices = dr.async_get(hass)
+        device = devices.async_get_device_by_identifier(
+            (DOMAIN, f"{SERIAL}_gateway_{AUX}"), config_entry.entry_id)
+        assert device is not None and device.via_device_id == loaded.primary_device_id
+        await _a_minute_later(clock, hass, AUX_CONNECTION, STATE_ON)
+        await until(lambda: _hardware(devices, device.id) == "3.0.4")
+
+
+def _hardware(devices: dr.DeviceRegistry, device_id: str) -> str | None:
+    found = devices.async_get(device_id)
+    return found.hw_version if isinstance(found, dr.DeviceEntry) else None

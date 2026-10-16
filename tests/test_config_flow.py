@@ -22,7 +22,7 @@ from powerview_connect.testing import SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.powerview_connect.const import DOMAIN
-from custom_components.powerview_connect.hub import PowerViewHub
+from custom_components.powerview_connect.runtime import PowerViewRuntime
 
 from .conftest import SERIAL, TITLE
 
@@ -209,9 +209,9 @@ async def test_a_gateway_discovered_where_a_home_is_configured_is_not_read(
 
 
 async def test_reconfiguring_moves_the_home_to_its_gateways_new_address(
-    hass: HomeAssistant, loaded: PowerViewHub, gateway: SimulatedGateway
+    hass: HomeAssistant, config_entry: MockConfigEntry, loaded: PowerViewRuntime, gateway: SimulatedGateway
 ) -> None:
-    entry = loaded.entry
+    entry = config_entry
     result = await _reconfigure(hass, entry)
     assert result.get("step_id") == "reconfigure"
     result = await _submit(hass, result["flow_id"], {CONF_HOST: "127.0.0.1:1"})
@@ -224,15 +224,15 @@ async def test_reconfiguring_moves_the_home_to_its_gateways_new_address(
 
 
 async def test_reconfiguring_to_another_homes_gateway_is_refused(
-    hass: HomeAssistant, loaded: PowerViewHub, gateway: SimulatedGateway
+    hass: HomeAssistant, config_entry: MockConfigEntry, loaded: PowerViewRuntime, gateway: SimulatedGateway
 ) -> None:
     async with SimulatedGateway(serial="OTHER-0002") as other:
         other.add_room(1, "Room")
         other.add_shade(1, "Shade", room_id=1)
-        result = await _reconfigure(hass, loaded.entry)
+        result = await _reconfigure(hass, config_entry)
         result = await _submit(hass, result["flow_id"], {CONF_HOST: other.host})
     assert result.get("reason") == "wrong_gateway"
-    assert loaded.entry.data == {CONF_HOST: gateway.host}
+    assert config_entry.data == {CONF_HOST: gateway.host}
 
 
 @pytest.mark.parametrize(("given", "stored"), [
@@ -241,9 +241,9 @@ async def test_reconfiguring_to_another_homes_gateway_is_refused(
      {"motion_poll_interval": 2.5, "refresh_minutes": 30}),
 ])
 async def test_the_options_are_stored_and_the_home_reloaded(
-    hass: HomeAssistant, loaded: PowerViewHub, given: dict[str, Any], stored: dict[str, Any]
+    hass: HomeAssistant, config_entry: MockConfigEntry, loaded: PowerViewRuntime, given: dict[str, Any], stored: dict[str, Any]
 ) -> None:
-    entry = loaded.entry
+    entry = config_entry
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result.get("step_id") == "init"
     flow: Any = hass.config_entries.options
@@ -256,9 +256,9 @@ async def test_the_options_are_stored_and_the_home_reloaded(
 
 
 async def test_the_options_refuse_a_read_more_often_than_twice_a_second(
-    hass: HomeAssistant, loaded: PowerViewHub
+    hass: HomeAssistant, config_entry: MockConfigEntry, loaded: PowerViewRuntime
 ) -> None:
-    result = await hass.config_entries.options.async_init(loaded.entry.entry_id)
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
     flow: Any = hass.config_entries.options
     with pytest.raises(Exception, match="motion_poll_interval"):
         await flow.async_configure(result["flow_id"], {"motion_poll_interval": 0.1})

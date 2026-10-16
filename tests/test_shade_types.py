@@ -15,7 +15,7 @@ from powerview_connect.testing import SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.powerview_connect.const import DOMAIN, SERVICE_SET_POSITIONS
-from custom_components.powerview_connect.hub import PowerViewHub
+from custom_components.powerview_connect.runtime import PowerViewRuntime
 
 from .conftest import P, S, T, state, until
 
@@ -38,7 +38,7 @@ SHADES: dict[int, tuple[str, Capabilities]] = {
 @pytest.fixture
 async def kinds(
     hass: HomeAssistant, gateway: SimulatedGateway, config_entry: MockConfigEntry
-) -> AsyncIterator[PowerViewHub]:
+) -> AsyncIterator[PowerViewRuntime]:
     """The home with one shade of each kind besides those in every test's home."""
     gateway.add_room(70, "Study")
     for shade_id, (name, capability) in SHADES.items():
@@ -68,7 +68,7 @@ def _features(hass: HomeAssistant, entity_id: str) -> CoverEntityFeature:
     ("cover.bedroom_blind", TILT, "shade"),
 ])
 async def test_each_kind_of_shade_has_the_covers_its_capabilities_describe(
-    hass: HomeAssistant, kinds: PowerViewHub, entity_id: str,
+    hass: HomeAssistant, kinds: PowerViewRuntime, entity_id: str,
     features: CoverEntityFeature, device_class: str,
 ) -> None:
     assert _features(hass, entity_id) == features
@@ -76,7 +76,7 @@ async def test_each_kind_of_shade_has_the_covers_its_capabilities_describe(
 
 
 async def test_a_dual_overlapped_shade_shows_front_and_rear_rails_and_front_vanes(
-    hass: HomeAssistant, kinds: PowerViewHub
+    hass: HomeAssistant, kinds: PowerViewRuntime
 ) -> None:
     front = state(hass, "cover.study_duolite_tilt_front").attributes
     rear = state(hass, "cover.study_duolite_tilt_rear").attributes
@@ -99,7 +99,7 @@ async def _call(hass: HomeAssistant, service: str, entity_id: str, **data: Any) 
     ("cover.study_duolite_wide_front", "open_cover_tilt", {}, {"tilt": 1.0}),
 ])
 async def test_a_command_sends_only_its_own_rail_or_the_vanes(
-    hass: HomeAssistant, kinds: PowerViewHub, gateway: SimulatedGateway,
+    hass: HomeAssistant, kinds: PowerViewRuntime, gateway: SimulatedGateway,
     entity_id: str, service: str, data: dict[str, Any], sent: dict[str, float],
 ) -> None:
     await _call(hass, service, entity_id, **data)
@@ -108,7 +108,7 @@ async def test_a_command_sends_only_its_own_rail_or_the_vanes(
 
 
 async def test_stopping_the_vanes_stops_the_shade(
-    hass: HomeAssistant, kinds: PowerViewHub, gateway: SimulatedGateway
+    hass: HomeAssistant, kinds: PowerViewRuntime, gateway: SimulatedGateway
 ) -> None:
     await _call(hass, "stop_cover_tilt", "cover.study_tilt_90")
     assert gateway.requests[-1].path == "/home/shades/stop"
@@ -116,7 +116,7 @@ async def test_stopping_the_vanes_stops_the_shade(
 
 
 async def test_a_tilt_only_shade_is_closed_with_its_vanes_and_follows_their_move(
-    hass: HomeAssistant, kinds: PowerViewHub, gateway: SimulatedGateway
+    hass: HomeAssistant, kinds: PowerViewRuntime, gateway: SimulatedGateway
 ) -> None:
     blind = "cover.bedroom_blind"
     await _call(hass, "close_cover_tilt", blind)
@@ -127,7 +127,7 @@ async def test_a_tilt_only_shade_is_closed_with_its_vanes_and_follows_their_move
 
 
 async def test_set_positions_is_for_top_down_bottom_up_shades_only(
-    hass: HomeAssistant, kinds: PowerViewHub
+    hass: HomeAssistant, kinds: PowerViewRuntime
 ) -> None:
     with pytest.raises(ServiceValidationError) as raised:
         await hass.services.async_call(
