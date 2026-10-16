@@ -55,6 +55,14 @@ The tracker's clock is the hub's `clock`, `time.monotonic` unless a test sets an
   taken; when the shades or scenes are not those set up, the entry reloads. Setup removes the
   devices of shades the home no longer has.
 
+## The log
+
+Every logger of the integration has one filter, which replaces each gateway's address and
+serial number and each shade's serial number and Bluetooth name with a name for it, in the
+message and in the errors raised for a command. A log can then be shared as it is. The
+replacements are learnt when a home is read, and in the config flow for an address that does
+not answer.
+
 ## Devices and entities
 
 - The gateway is a device; each shade a device connected through it, in the area of its room.

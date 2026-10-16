@@ -36,8 +36,10 @@ from .const import (
     SSE_BACKOFF,
     SSE_IDLE_TIMEOUT,
 )
+from .redact import REDACTIONS
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER.addFilter(REDACTIONS)
 
 type PowerViewConfigEntry = ConfigEntry[PowerViewHub]
 type Listener = Callable[[], None]
@@ -72,6 +74,7 @@ class PowerViewHub:
         self.entry = entry
         self.client = client
         self.home = home
+        REDACTIONS.add_home(client.host, home)
         self.unique_id: str = entry.unique_id or client.host
         self.gateway: Gateway | None = home.gateway_at(client.host) or home.primary_gateway
         self.signal_strengths: dict[int, int | None] = {
@@ -329,5 +332,5 @@ def _command_failed(err: PowerViewError) -> HomeAssistantError:
     return HomeAssistantError(
         translation_domain=DOMAIN,
         translation_key="command_failed",
-        translation_placeholders={"error": str(err)},
+        translation_placeholders={"error": REDACTIONS.redact(str(err))},
     )
