@@ -229,9 +229,9 @@ automation:
   positions and motion, and whether the event stream is open. The gateway's address, serial
   numbers and Bluetooth names are left out.
 - **Enable debug logging** from the same menu to log every event the gateway sends, and every
-  request to it with how long it took. The integration's log lines name gateways and shades by
-  name and number: addresses, serial numbers and Bluetooth names are replaced, as are they in
-  the errors it raises, so the log can be shared.
+  request to it with how long it took. Serial numbers and Bluetooth names are replaced with the
+  gateway's name or the shade's number, in the log and in the errors the integration raises;
+  addresses on the home's own network are kept, as they help find a fault.
 
 ## Known limits
 

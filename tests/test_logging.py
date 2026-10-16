@@ -37,7 +37,7 @@ async def test_the_debug_log_holds_every_event_and_how_long_each_request_took(
         assert f"{request} took" in caplog.text
 
 
-async def test_the_log_holds_no_address_serial_number_or_bluetooth_name(
+async def test_the_log_holds_the_address_but_no_serial_number_or_bluetooth_name(
     hass: HomeAssistant, loaded: PowerViewHub, gateway: SimulatedGateway,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -50,17 +50,15 @@ async def test_the_log_holds_no_address_serial_number_or_bluetooth_name(
     await loaded.async_refresh()
     await until(lambda: "does not answer" in _ours(caplog))
     logged = _ours(caplog)
-    assert "<gateway>" in logged
-    for secret in (gateway.host, "127.0.0.1", SERIAL, "0000000000000154", "SIM:"):
+    assert gateway.host in logged
+    for secret in (SERIAL, "0000000000000154", "SIM:"):
         assert secret not in logged, secret
 
 
-def test_an_address_is_replaced_with_and_without_its_port_and_longer_texts_first() -> None:
+def test_longer_texts_are_replaced_first_and_an_empty_one_never() -> None:
     redactions = Redactions()
-    redactions.add_home("192.0.2.3:8080", Home(None, (), {}, ()))
-    redactions.add("192.0.2.30", "<other>")
+    redactions.add_home(Home(None, (), {}, ()))
+    redactions.add("ABC", "<short>")
+    redactions.add("ABCDEF", "<long>")
     redactions.add(None, "<nothing>")
-    assert redactions.redact("192.0.2.3:8080 192.0.2.3 192.0.2.30") == (
-        "<gateway> <gateway> <other>")
-    redactions.add_home("gateway.example", Home(None, (), {}, ()))
-    assert redactions.redact("gateway.example") == "<gateway>"
+    assert redactions.redact("ABCDEF ABC") == "<long> <short>"

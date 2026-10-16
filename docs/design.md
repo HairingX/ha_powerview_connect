@@ -57,11 +57,10 @@ The tracker's clock is the hub's `clock`, `time.monotonic` unless a test sets an
 
 ## The log
 
-Every logger of the integration has one filter, which replaces each gateway's address and
-serial number and each shade's serial number and Bluetooth name with a name for it, in the
-message and in the errors raised for a command. A log can then be shared as it is. The
-replacements are learnt when a home is read, and in the config flow for an address that does
-not answer.
+The hub's logger has one filter, which replaces each gateway's serial number and each shade's
+serial number and Bluetooth name with a name for it, in the message and in the errors raised
+for a command. Addresses are kept: they are on the home's own network, and they show which
+gateway is on which network. The replacements are learnt when a home is read.
 
 ## Devices and entities
 

@@ -74,7 +74,7 @@ class PowerViewHub:
         self.entry = entry
         self.client = client
         self.home = home
-        REDACTIONS.add_home(client.host, home)
+        REDACTIONS.add_home(home)
         self.unique_id: str = entry.unique_id or client.host
         self.gateway: Gateway | None = home.gateway_at(client.host) or home.primary_gateway
         self.signal_strengths: dict[int, int | None] = {

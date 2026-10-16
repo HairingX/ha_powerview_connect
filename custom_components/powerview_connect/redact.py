@@ -1,4 +1,4 @@
-"""What identifies a home - addresses, serial numbers, Bluetooth names - kept out of the log."""
+"""What identifies a shade or gateway - serial numbers, Bluetooth names - kept out of the log."""
 
 from __future__ import annotations
 
@@ -20,14 +20,9 @@ class Redactions(logging.Filter):
         if text:
             self._names[text] = name
 
-    def add_home(self, host: str, home: Home) -> None:
-        """Replace the address `host`, and each address, serial number and Bluetooth name in
-        `home`."""
-        self.add(host, "<gateway>")
-        if host.count(":") == 1:
-            self.add(host.rsplit(":", 1)[0], "<gateway>")
+    def add_home(self, home: Home) -> None:
+        """Replace each serial number and Bluetooth name in `home`."""
         for gateway in home.gateways:
-            self.add(gateway.ip, f"<address of {gateway.name}>")
             self.add(gateway.serial, f"<serial of {gateway.name}>")
         for shade in home.shades.values():
             self.add(shade.serial, f"<serial of shade {shade.id}>")
@@ -46,4 +41,4 @@ class Redactions(logging.Filter):
 
 
 REDACTIONS = Redactions()
-"""The replacements of every entry, for every logger of the integration."""
+"""The replacements of every entry, for the hub's logger."""

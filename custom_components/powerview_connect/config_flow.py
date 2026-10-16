@@ -21,10 +21,8 @@ from .const import (
     DOMAIN,
 )
 from .hub import PowerViewConfigEntry, new_client
-from .redact import REDACTIONS
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER.addFilter(REDACTIONS)
 
 SCHEMA = probatio.Schema({probatio.Required(CONF_HOST): str})
 
@@ -70,7 +68,6 @@ class PowerViewConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             home = await client.get_home()
         except PowerViewError as err:
-            REDACTIONS.add(client.host, "<address given>")
             _LOGGER.debug("No PowerView gateway answers at %s: %s", client.host, err)
             raise FlowError("cannot_connect") from err
         primary, here = home.primary_gateway, home.gateway_at(client.host)
