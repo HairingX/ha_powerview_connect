@@ -68,7 +68,7 @@ class PowerViewConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             home = await client.get_home()
         except PowerViewError as err:
-            _LOGGER.debug("No PowerView gateway answers at %s: %s", host, err)
+            _LOGGER.debug("No PowerView gateway answers at %s: %s", client.host, err)
             raise FlowError("cannot_connect") from err
         primary, here = home.primary_gateway, home.gateway_at(client.host)
         if primary is None:
