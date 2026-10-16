@@ -256,7 +256,7 @@ automation:
 - The gateway's estimate of how long a move takes is about half the real time, so it is not
   used.
 - Scenes are activated, not edited: create and change them in the PowerView app.
-- Remotes are not shown: the gateway does not report remotes paired to their shades.
+- Remotes are not shown: what the gateway lists for one has not been measured.
 - What a gateway on Wi-Fi or without internet reports has not been measured; the Network and
   Internet sensors take it from the names the gateway uses on a cable.
 
