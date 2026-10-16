@@ -1,5 +1,6 @@
 """Constants for the PowerView Connect integration."""
 
+from datetime import timedelta
 from typing import Final
 
 DOMAIN: Final = "powerview_connect"
@@ -17,6 +18,8 @@ SSE_IDLE_TIMEOUT: Final = 360.0
 moves, so this only catches a stream that broke without closing."""
 SSE_BACKOFF: Final[tuple[float, ...]] = (1, 2, 5, 10, 30, 60)
 """Seconds to wait before each new attempt at the event stream, the last one repeated."""
+GATEWAY_INTERVAL: Final = timedelta(minutes=1)
+"""Time between two questions to each gateway of its own state."""
 MAX_CONCURRENT_POLLS: Final = 3
 """Reads of moving shades sent to the gateway at once."""
 

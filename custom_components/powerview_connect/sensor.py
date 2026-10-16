@@ -1,4 +1,5 @@
-"""How well the gateway hears each shade, and the battery of each shade that has one."""
+"""The network each gateway is on, how well the gateway hears each shade, and the battery of each
+shade that has one."""
 
 from __future__ import annotations
 
@@ -10,9 +11,15 @@ from homeassistant.components.sensor import (
 from homeassistant.const import SIGNAL_STRENGTH_DECIBELS_MILLIWATT, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from powerview_connect import BatteryStatus, Shade
+from powerview_connect import BatteryStatus, Gateway, Shade
 
-from .entity import PowerViewShadeEntity, add_entities, has_battery
+from .entity import (
+    PowerViewGatewayEntity,
+    PowerViewShadeEntity,
+    add_entities,
+    gateways,
+    has_battery,
+)
 from .hub import PowerViewConfigEntry, PowerViewHub
 
 PARALLEL_UPDATES = 0
@@ -23,10 +30,11 @@ async def async_setup_entry(
     entry: PowerViewConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Add a signal strength sensor for each shade the gateway reports one for, and a battery
-    sensor for each shade not on mains power."""
+    """Add a network sensor for each gateway, a signal strength sensor for each shade the gateway
+    reports one for, and a battery sensor for each shade not on mains power."""
     hub = entry.runtime_data
-    sensors: list[SensorEntity] = [
+    sensors: list[SensorEntity] = [PowerViewGatewayNetwork(hub, gateway) for gateway in gateways(hub)]
+    sensors += [
         PowerViewSignalStrength(hub, shade)
         for shade in hub.home.shades.values()
         if shade.signal_strength is not None
@@ -84,3 +92,21 @@ class PowerViewBatteryLevel(PowerViewShadeEntity, SensorEntity):
         super()._update()
         battery = self.hub.batteries[self.shade.id]
         self._attr_native_value = BATTERY_LEVELS.get(battery) if battery is not None else None
+
+
+class PowerViewGatewayNetwork(PowerViewGatewayEntity, SensorEntity):
+    """Whether a gateway is on a cable or on Wi-Fi."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["wired", "wifi"]
+    _attr_translation_key = "network"
+
+    def __init__(self, hub: PowerViewHub, gateway: Gateway) -> None:
+        """The network sensor of `gateway`."""
+        super().__init__(hub, gateway, "network")
+        self._update()
+
+    def _update(self) -> None:
+        super()._update()
+        wifi = self.status.wifi if self.status else None
+        self._attr_native_value = None if wifi is None else ("wifi" if wifi else "wired")

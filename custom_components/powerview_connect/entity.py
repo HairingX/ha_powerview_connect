@@ -4,19 +4,22 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from homeassistant.const import EntityCategory
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from powerview_connect import Shade, ShadeTracker
+from powerview_connect import Gateway, GatewayStatus, Shade, ShadeTracker
 
 from .const import DOMAIN, MANUFACTURER
 from .hub import PowerViewHub
 
 
-def gateway_identifier(hub: PowerViewHub) -> tuple[str, str]:
-    """The device registry identifier of the gateway."""
-    return (DOMAIN, hub.unique_id)
+def gateway_identifier(hub: PowerViewHub, gateway: Gateway | None = None) -> tuple[str, str]:
+    """The device registry identifier of a gateway, the primary one by default."""
+    if gateway is None or gateway == hub.gateway:
+        return (DOMAIN, hub.unique_id)
+    return (DOMAIN, f"{hub.unique_id}_gateway_{gateway.serial}")
 
 
 def shade_identifier(hub: PowerViewHub, shade_id: int) -> tuple[str, str]:
@@ -25,17 +28,39 @@ def shade_identifier(hub: PowerViewHub, shade_id: int) -> tuple[str, str]:
 
 
 def gateway_device(hub: PowerViewHub) -> DeviceInfo:
-    """The gateway as a device."""
+    """The primary gateway as a device."""
     gateway = hub.gateway
+    if gateway is None:
+        return DeviceInfo(
+            identifiers={gateway_identifier(hub)},
+            manufacturer=MANUFACTURER,
+            name="PowerView Gateway",
+            model="PowerView Gen 3 Gateway",
+            configuration_url=f"{hub.client.base_url}/home",
+        )
+    device = _gateway_details(hub, gateway)
+    device["configuration_url"] = f"{hub.client.base_url}/home"
+    return device
+
+
+def auxiliary_gateway_device(hub: PowerViewHub, gateway: Gateway) -> DeviceInfo:
+    """An auxiliary gateway as a device, connected through the primary gateway."""
+    device = _gateway_details(hub, gateway)
+    device["via_device_id"] = hub.gateway_device_id
+    return device
+
+
+def _gateway_details(hub: PowerViewHub, gateway: Gateway) -> DeviceInfo:
+    status = hub.gateway_states.get(gateway.serial)
     return DeviceInfo(
-        identifiers={gateway_identifier(hub)},
+        identifiers={gateway_identifier(hub, gateway)},
         manufacturer=MANUFACTURER,
-        name=gateway.name if gateway else "PowerView Gateway",
-        model=f"PowerView Gen 3 Gateway {gateway.model}" if gateway and gateway.model
+        name=gateway.name,
+        model=f"PowerView Gen 3 Gateway {gateway.model}" if gateway.model
         else "PowerView Gen 3 Gateway",
-        sw_version=gateway.firmware if gateway else None,
-        serial_number=gateway.serial if gateway else None,
-        configuration_url=f"{hub.client.base_url}/home",
+        sw_version=gateway.firmware,
+        hw_version=status.hardware_version if status else None,
+        serial_number=gateway.serial,
     )
 
 
@@ -52,7 +77,7 @@ def shade_device(hub: PowerViewHub, shade: Shade) -> DeviceInfo:
         sw_version=shade.firmware,
         serial_number=shade.serial,
         suggested_area=shade.room_name,
-        via_device_id=hub.gateway_device_id,
+        via_device_id=hub.via_device_id(shade.id),
     )
 
 
@@ -117,3 +142,35 @@ class PowerViewShadeEntity(PowerViewEntity):
 
     def _update(self) -> None:
         self._attr_available = self.hub.available and self.tracker.online
+
+
+class PowerViewGatewayEntity(PowerViewEntity):
+    """An entity of one gateway, kept current from what it reports of itself."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, hub: PowerViewHub, gateway: Gateway, key: str) -> None:
+        """The `key` entity of `gateway`."""
+        super().__init__(hub)
+        self.gateway = gateway
+        self._attr_unique_id = f"{hub.unique_id}_gateway_{gateway.serial}_{key}"
+        self._attr_device_info = DeviceInfo(identifiers={gateway_identifier(hub, gateway)})
+
+    @property
+    def status(self) -> GatewayStatus | None:
+        """What the gateway last reported of itself; None while it does not answer."""
+        return self.hub.gateway_states[self.gateway.serial]
+
+    async def async_added_to_hass(self) -> None:
+        """Follow what the gateway reports."""
+        await super().async_added_to_hass()
+        self.async_on_remove(self.hub.async_listen(self.gateway.serial, self._changed))
+        self._update()
+
+    def _update(self) -> None:
+        self._attr_available = self.status is not None
+
+
+def gateways(hub: PowerViewHub) -> list[Gateway]:
+    """The gateways of the home that can be asked of their state."""
+    return [gateway for gateway in hub.home.gateways if gateway.serial in hub.gateway_clients]
