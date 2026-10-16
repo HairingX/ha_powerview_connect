@@ -60,6 +60,14 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connection": {
+        "name": "Connection"
+      },
+      "internet": {
+        "name": "Internet"
+      }
+    },
     "cover": {
       "top": {
         "name": "Top",
@@ -102,6 +110,13 @@
           "medium": "Medium",
           "high": "High",
           "plugged_in": "Plugged in"
+        }
+      },
+      "network": {
+        "name": "Network",
+        "state": {
+          "wired": "Wired",
+          "wifi": "Wi-Fi"
         }
       }
     }

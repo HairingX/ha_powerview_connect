@@ -1,5 +1,19 @@
 {
   "entity": {
+    "binary_sensor": {
+      "connection": {
+        "default": "mdi:router-network",
+        "state": {
+          "off": "mdi:router-network-off"
+        }
+      },
+      "internet": {
+        "default": "mdi:web",
+        "state": {
+          "off": "mdi:web-off"
+        }
+      }
+    },
     "cover": {
       "top": {
         "default": "mdi:roller-shade",
@@ -34,6 +48,12 @@
           "medium": "mdi:battery-50",
           "high": "mdi:battery",
           "plugged_in": "mdi:power-plug-battery"
+        }
+      },
+      "network": {
+        "default": "mdi:ethernet",
+        "state": {
+          "wifi": "mdi:wifi"
         }
       }
     }

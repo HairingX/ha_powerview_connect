@@ -17,6 +17,7 @@ from powerview_connect import (
     BatteryStatus,
     EventKind,
     Gateway,
+    GatewayStatus,
     Home,
     PowerViewClient,
     PowerViewError,
@@ -32,6 +33,7 @@ from .const import (
     DEFAULT_MOTION_POLL_INTERVAL,
     DEFAULT_REFRESH_MINUTES,
     DOMAIN,
+    GATEWAY_INTERVAL,
     MAX_CONCURRENT_POLLS,
     SSE_BACKOFF,
     SSE_IDLE_TIMEOUT,
@@ -43,6 +45,8 @@ _LOGGER.addFilter(REDACTIONS)
 
 type PowerViewConfigEntry = ConfigEntry[PowerViewHub]
 type Listener = Callable[[], None]
+type ListenKey = int | str | None
+"""A shade's id, a gateway's serial number, or None for the hub's availability."""
 
 
 async def _timed[T](what: str, request: Awaitable[T]) -> T:
@@ -88,8 +92,21 @@ class PowerViewHub:
         self.trackers: dict[int, ShadeTracker] = {
             shade_id: ShadeTracker(shade.positions) for shade_id, shade in home.shades.items()
         }
+        self.gateway_clients: dict[str, PowerViewClient] = {}
+        """A client of each gateway that can be asked of its state, by serial number."""
+        for gateway in home.gateways:
+            if gateway == self.gateway:
+                self.gateway_clients[gateway.serial] = client
+            elif gateway.ip:
+                # Only ever asked of its state, so nothing can reach a shade through it.
+                self.gateway_clients[gateway.serial] = PowerViewClient(
+                    async_get_clientsession(hass), gateway.ip, read_only=True)
+        self.gateway_states: dict[str, GatewayStatus | None] = dict.fromkeys(self.gateway_clients)
+        """What each gateway last reported of itself; None while it does not answer."""
         self.gateway_device_id = ""
-        """The gateway's device id, set when its device is registered."""
+        """The primary gateway's device id, set when its device is registered."""
+        self.gateway_device_ids: dict[str, str] = {}
+        """Each gateway's device id by serial number, set when its device is registered."""
         self.unique_ids: set[str] = set()
         """The unique id of every entity the entry has, disabled ones included."""
         self.available = True
@@ -102,7 +119,7 @@ class PowerViewHub:
         self._refresh_interval = timedelta(
             minutes=int(entry.options.get(CONF_REFRESH_MINUTES, DEFAULT_REFRESH_MINUTES))
         )
-        self._listeners: dict[int | None, list[Listener]] = {}
+        self._listeners: dict[ListenKey, list[Listener]] = {}
         self._polls: dict[int, CALLBACK_TYPE] = {}
         self._poll_slots = asyncio.Semaphore(MAX_CONCURRENT_POLLS)
 
@@ -118,7 +135,20 @@ class PowerViewHub:
                 name=f"{DOMAIN} {self.entry.title} refresh",
             )
         )
+        self.entry.async_on_unload(
+            async_track_time_interval(
+                self.hass, self._refresh_gateways_now, GATEWAY_INTERVAL,
+                name=f"{DOMAIN} {self.entry.title} gateways",
+            )
+        )
         self.entry.async_on_unload(self._stop_polls)
+
+    def via_device_id(self, shade_id: int) -> str:
+        """The device id of the gateway that serves a shade, the primary one if none says so."""
+        for gateway in self.home.gateways:
+            if shade_id in gateway.shade_ids:
+                return self.gateway_device_ids.get(gateway.serial, self.gateway_device_id)
+        return self.gateway_device_id
 
     @callback
     def _stop_polls(self) -> None:
@@ -129,9 +159,10 @@ class PowerViewHub:
     # --------------------------------------------------------------- listeners
 
     @callback
-    def async_listen(self, shade_id: int | None, listener: Listener) -> CALLBACK_TYPE:
-        """Call `listener` when shade `shade_id` changes, or for None, when availability does."""
-        listeners = self._listeners.setdefault(shade_id, [])
+    def async_listen(self, key: ListenKey, listener: Listener) -> CALLBACK_TYPE:
+        """Call `listener` when the shade or gateway `key` names changes, or for None, when
+        availability does."""
+        listeners = self._listeners.setdefault(key, [])
         listeners.append(listener)
 
         @callback
@@ -141,8 +172,8 @@ class PowerViewHub:
         return remove
 
     @callback
-    def _notify(self, shade_id: int | None) -> None:
-        for listener in list(self._listeners.get(shade_id, [])):
+    def _notify(self, key: ListenKey) -> None:
+        for listener in list(self._listeners.get(key, [])):
             listener()
 
     @callback
@@ -191,6 +222,28 @@ class PowerViewHub:
         self.signal_strengths[shade.id] = shade.signal_strength
         self.batteries[shade.id] = shade.battery
         return changed
+
+    # ---------------------------------------------------------------- gateways
+
+    async def _refresh_gateways_now(self, _: datetime) -> None:
+        await self.async_refresh_gateways()
+
+    async def async_refresh_gateways(self) -> None:
+        """Ask every gateway of the home of its own state, all at once."""
+        serials = list(self.gateway_clients)
+        found = await asyncio.gather(
+            *(self.gateway_clients[serial].get_gateway() for serial in serials),
+            return_exceptions=True,
+        )
+        for serial, status in zip(serials, found, strict=True):
+            if isinstance(status, BaseException):
+                if not isinstance(status, PowerViewError):
+                    raise status
+                _LOGGER.debug("Gateway %s does not answer: %s", serial, status)
+                status = None
+            if status != self.gateway_states[serial]:
+                self.gateway_states[serial] = status
+                self._notify(serial)
 
     # ------------------------------------------------------------ event stream
 

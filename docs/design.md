@@ -43,6 +43,10 @@ One `PowerViewHub` per config entry holds the home as it was read at setup and a
   timeouts end it.
 - **Commands**, sent for one rail, or both through the action. The tracker takes the command,
   so the cover shows opening or closing before the gateway's event arrives.
+- **Gateway states**, each gateway asked once a minute with `GET /gateway`, all at once: the
+  primary through the entry's client, an auxiliary one through a read-only client of the address
+  `/home` lists for it, so nothing can reach a shade through it. A gateway that does not answer
+  is kept as None; one listed without an address is not asked.
 
 The tracker's clock is the hub's `clock`, `time.monotonic` unless a test sets another.
 
@@ -64,7 +68,13 @@ gateway is on which network. The replacements are learnt when a home is read.
 
 ## Devices and entities
 
-- The gateway is a device; each shade a device connected through it, in the area of its room.
+- The primary gateway is a device, and each auxiliary gateway a device connected through it.
+  Each shade is a device connected through the gateway whose `shd_Ids` lists it, the primary
+  one when none does, in the area of its room.
+- Each gateway that can be asked has three diagnostic entities: Connection, on while it answers
+  and always available, as not answering is what it reports; Internet, from `internetState`;
+  and Network, wired or Wi-Fi from the interface in use. The last two are unavailable while the
+  gateway does not answer.
 - A shade's covers follow its capabilities, as the Gen 3 API describes them: two for
   top-down/bottom-up (*Top*, the top rail, and *Bottom*, the bottom rail), two for
   dual-overlapped (*Front*, the primary rail, and *Rear*, the secondary), one inverted for

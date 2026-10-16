@@ -101,10 +101,17 @@ and its history stays. Reconfigure refuses another home's gateway.
 
 ## What you get
 
-- **The gateway** - a device with its model, firmware and serial number, and each scene stored
-  on it as a **scene** entity, named as in the PowerView app.
+- **The gateway** - a device with its model, firmware, hardware version and serial number, and
+  each scene stored on it as a **scene** entity, named as in the PowerView app.
+- **Each auxiliary gateway** - a device of its own, connected through the primary gateway.
+- **Each gateway**, the primary one too, has three diagnostic sensors, read once a minute:
+  - **Connection** - on while the gateway answers. A gateway that stops answering shows here
+    first, and so do the shades it serves.
+  - **Internet** - on while the gateway reports it reaches the internet, which the PowerView app
+    needs away from home.
+  - **Network** - wired or Wi-Fi.
 - **Each shade** - a device in the room the PowerView app puts it in, connected through the
-  gateway, with its kind, type and firmware; and its **covers** (see Supported devices), each
+  gateway that serves it, with its kind, type and firmware; and its **covers** (see Supported devices), each
   with:
   - its position, 0-100, and whether it is opening or closing;
   - the attribute `target_position`, where it is heading while it moves;
@@ -148,6 +155,8 @@ moves:
 - **It stops:** on the gateway's stop event; or when it has reached its target and stood still
   for 1.5 s, has not moved for 6 s, or has not started at all 25 s after the command - in case
   the stop event comes late or not at all.
+- **Every minute**, each gateway is asked of its own state, auxiliary ones at their own
+  address: only `GET /gateway`, which moves nothing.
 - **Every 10 minutes**, the whole home is read, in case an event was missed. When the shades or
   scenes have changed, the entry reloads to add or remove them.
 - When the stream breaks, it is reopened, and the whole home is read again.
@@ -226,8 +235,8 @@ automation:
 ## Diagnostics and debug logging
 
 - **Download diagnostics** from the integration's menu: each shade's kind, type, firmware,
-  positions and motion, and whether the event stream is open. The gateway's address, serial
-  numbers and Bluetooth names are left out.
+  positions and motion, whether the event stream is open, and what each gateway reports of
+  itself. The gateways' addresses, serial numbers and Bluetooth names are left out.
 - **Enable debug logging** from the same menu to log every event the gateway sends, and every
   request to it with how long it took. Serial numbers and Bluetooth names are replaced with the
   gateway's name or the shade's number, in the log and in the errors the integration raises;
@@ -249,6 +258,9 @@ automation:
 - The gateway's estimate of how long a move takes is about half the real time, so it is not
   used.
 - Scenes are activated, not edited: create and change them in the PowerView app.
+- Remotes are not shown: what the gateway lists for one has not been measured.
+- What a gateway without internet reports has not been measured; the Internet sensor is on
+  only while the gateway says `Connected`.
 
 ## Migrating from Home Assistant's PowerView integration
 

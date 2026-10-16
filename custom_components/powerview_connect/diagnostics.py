@@ -6,7 +6,7 @@ from typing import Any
 
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
-from powerview_connect import Shade, ShadeTracker
+from powerview_connect import GatewayStatus, Shade, ShadeTracker
 
 from .hub import PowerViewConfigEntry
 
@@ -32,7 +32,9 @@ async def async_get_config_entry_diagnostics(
         "available": hub.available,
         "stream_connected": hub.stream_connected,
         "gateways": [
-            {"primary": gateway.is_primary, "model": gateway.model, "firmware": gateway.firmware}
+            {"primary": gateway.is_primary, "model": gateway.model, "firmware": gateway.firmware,
+             "radio_firmware": list(gateway.radio_firmware), "shades": list(gateway.shade_ids),
+             "status": _status(hub.gateway_states.get(gateway.serial), gateway.serial in hub.gateway_states)}
             for gateway in hub.home.gateways
         ],
         "shades": {
@@ -60,4 +62,17 @@ def _shade(shade: Shade, tracker: ShadeTracker) -> dict[str, Any]:
             "target": {str(rail): value for rail, value in tracker.target.items()},
             "eta": tracker.eta,
         },
+    }
+
+
+def _status(status: GatewayStatus | None, asked: bool) -> dict[str, Any] | str:
+    if status is None:
+        return "not answering" if asked else "not asked"
+    return {
+        "hardware_version": status.hardware_version,
+        "firmware": status.firmware,
+        "radio_firmware": list(status.radio_firmware),
+        "primary": status.is_primary,
+        "interface": status.interface,
+        "internet_state": status.internet_state,
     }

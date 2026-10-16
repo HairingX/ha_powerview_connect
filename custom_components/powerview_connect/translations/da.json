@@ -60,6 +60,14 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connection": {
+        "name": "Forbindelse"
+      },
+      "internet": {
+        "name": "Internet"
+      }
+    },
     "cover": {
       "top": {
         "name": "Top",
@@ -102,6 +110,13 @@
           "medium": "Middel",
           "high": "Højt",
           "plugged_in": "Tilsluttet strøm"
+        }
+      },
+      "network": {
+        "name": "Netværk",
+        "state": {
+          "wired": "Kabel",
+          "wifi": "Wi-Fi"
         }
       }
     }

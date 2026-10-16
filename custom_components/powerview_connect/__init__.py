@@ -18,7 +18,7 @@ from homeassistant.helpers.typing import ConfigType
 from powerview_connect import PowerViewError
 
 from .const import ATTR_BOTTOM, ATTR_TOP, DOMAIN, SERVICE_SET_POSITIONS
-from .entity import gateway_device, gateway_identifier, shade_identifier
+from .entity import auxiliary_gateway_device, gateway_device, gateway_identifier, shade_identifier
 from .hub import PowerViewConfigEntry, PowerViewHub, new_client
 
 PLATFORMS: list[Platform] = [
@@ -65,11 +65,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) ->
         ) from err
     hub = PowerViewHub(hass, entry, client, home)
     entry.runtime_data = hub
+    await hub.async_refresh_gateways()
     registry = dr.async_get(hass)
-    # The gateway first, as each shade's device is connected through it.
+    # The gateways first, as each shade's device is connected through the one serving it.
     hub.gateway_device_id = registry.async_get_or_create(
         config_entry_id=entry.entry_id, **gateway_device(hub)
     ).id
+    if hub.gateway is not None:
+        hub.gateway_device_ids[hub.gateway.serial] = hub.gateway_device_id
+    for gateway in home.gateways:
+        if gateway != hub.gateway:
+            hub.gateway_device_ids[gateway.serial] = registry.async_get_or_create(
+                config_entry_id=entry.entry_id, **auxiliary_gateway_device(hub, gateway)
+            ).id
     _remove_stale_devices(registry, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _remove_lost_entities(hass, entry)
@@ -90,8 +98,8 @@ async def async_remove_config_entry_device(
 
 
 def _current_identifiers(hub: PowerViewHub) -> set[tuple[str, str]]:
-    return {gateway_identifier(hub)} | {
-        shade_identifier(hub, shade_id) for shade_id in hub.home.shades}
+    return {gateway_identifier(hub, gateway) for gateway in hub.home.gateways} | {
+        gateway_identifier(hub)} | {shade_identifier(hub, shade_id) for shade_id in hub.home.shades}
 
 
 @callback
