@@ -23,7 +23,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from powerview_connect import PowerViewClient
+from powerview_connect import PowerViewHub
 from powerview_connect.testing import ManualClock, SimulatedGateway
 
 from custom_components.powerview_connect.const import DOMAIN, SERVICE_SET_POSITIONS
@@ -106,8 +106,9 @@ async def test_a_move_from_any_source_is_shown_opening_or_closing_and_followed_l
 ) -> None:
     """The PowerView app, another client of the gateway, moves the shade; the gateway reports
     it, and the shade is read while it moves."""
-    app = PowerViewClient(async_get_clientsession(hass), gateway.host)
-    await app.set_positions([BOTTOM_UP], primary=0.9)
+    app = PowerViewHub(async_get_clientsession(hass), gateway.host)
+    await app.load()
+    await app.move(BOTTOM_UP, {P: 0.9})
     await until(lambda: state(hass, BOTTOM_UP_COVER).state == CoverState.OPENING)
     assert state(hass, BOTTOM_UP_COVER).attributes["target_position"] == 90
     gateway.move(BOTTOM_UP, {P: 0.6})

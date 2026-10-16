@@ -18,7 +18,6 @@ from powerview_connect import (
     HomeChanged,
     Shade,
     ShadeState,
-    capability_name,
 )
 
 from .const import DOMAIN, MANUFACTURER
@@ -43,7 +42,7 @@ def gateway_device(runtime: PowerViewRuntime, gateway: Gateway | None) -> Device
         return DeviceInfo(
             identifiers={gateway_identifier(runtime)}, manufacturer=MANUFACTURER,
             name="PowerView Gateway", model="PowerView Gen 3 Gateway",
-            configuration_url=f"{runtime.hub.client.base_url}/home",
+            configuration_url=f"{runtime.hub.base_url}/home",
         )
     state = runtime.hub.gateways.get(gateway.serial)
     status = state.status if state else None
@@ -58,7 +57,7 @@ def gateway_device(runtime: PowerViewRuntime, gateway: Gateway | None) -> Device
         serial_number=gateway.serial,
     )
     if gateway == runtime.hub.gateway:
-        device["configuration_url"] = f"{runtime.hub.client.base_url}/home"
+        device["configuration_url"] = f"{runtime.hub.base_url}/home"
     else:
         device["via_device_id"] = runtime.primary_device_id
     return device
@@ -70,7 +69,7 @@ def shade_device(runtime: PowerViewRuntime, shade: Shade) -> DeviceInfo:
         identifiers={shade_identifier(runtime, shade.id)},
         manufacturer=MANUFACTURER,
         name=shade.name,
-        model=f"{capability_name(shade.capabilities)} (type {shade.type})",
+        model=f"{shade.capability_name} (type {shade.type})",
         sw_version=shade.firmware,
         serial_number=shade.serial,
         suggested_area=shade.room_name,

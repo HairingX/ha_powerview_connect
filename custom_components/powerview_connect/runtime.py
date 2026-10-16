@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from powerview_connect import Clock, PowerViewClient, PowerViewError, PowerViewHub, SystemClock, Timing
+from powerview_connect import Clock, PowerViewError, PowerViewHub, Timing
 
 from .const import (
     CONF_MOTION_POLL_INTERVAL,
@@ -43,14 +43,14 @@ class PowerViewRuntime:
             self.primary_device_id)
 
 
-def new_client(hass: HomeAssistant, host: str) -> PowerViewClient:
-    """A client for the gateway at `host`, on Home Assistant's shared web session."""
-    return PowerViewClient(async_get_clientsession(hass), host)
+def new_probe(hass: HomeAssistant, host: str) -> PowerViewHub:
+    """A read-only hub for the gateway at `host`, to learn which home it serves."""
+    return PowerViewHub(async_get_clientsession(hass), host, read_only=True)
 
 
-def new_clock() -> Clock:
-    """The clock a hub keeps time by."""
-    return SystemClock()
+def new_clock() -> Clock | None:
+    """The clock a hub keeps time by; None for the event loop's own."""
+    return None
 
 
 def timing_from(options: Mapping[str, object]) -> Timing:

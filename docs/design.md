@@ -46,6 +46,10 @@ protocol.
   connection, and set `_attr_` values from the state they are given; nothing is polled by
   Home Assistant. A shade entity is available while the hub is and the shade is online.
 - **Commands** go to the hub; an error the gateway reports becomes a `HomeAssistantError`.
+- **The config flow** loads a read-only hub (`runtime.new_probe`) at the address given, and reads
+  from its home whether that is the primary gateway and which home it serves.
+- **Only the library's public API** is used: the hub, its states and changes, the home's model,
+  the covers and the errors.
 - **The home changing**: a shade, scene or gateway added to it gets its device and entities
   without a reload; one removed, once the hub has missed it in two reads in a row, has its
   device or scene removed; a shade renamed, moved to another room or gateway, or with new

@@ -24,7 +24,7 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from powerview_connect import Connection, PowerViewClient, PowerViewHub
+from powerview_connect import Connection, PowerViewHub
 
 from custom_components.powerview_connect.const import DOMAIN
 from custom_components.powerview_connect.runtime import PowerViewConfigEntry, PowerViewRuntime, timing_from
@@ -52,31 +52,25 @@ pytestmark = [
 
 
 @pytest.fixture
-def read_only(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[PowerViewClient]]:
-    """Every client and hub the integration makes reaches the real gateway, read-only."""
+def read_only(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[PowerViewHub]]:
+    """Every hub the integration makes reaches the real gateway, read-only."""
     assert HOST is not None
     pytest_socket.enable_socket()
     pytest_socket.socket_allow_hosts([HOST.split(":")[0], "127.0.0.1"])
-    made: list[PowerViewClient] = []
-
-    def new_client(hass: HomeAssistant, host: str) -> PowerViewClient:
-        client = PowerViewClient(async_get_clientsession(hass), host, read_only=True)
-        made.append(client)
-        return client
+    made: list[PowerViewHub] = []
 
     def new_hub(hass: HomeAssistant, entry: PowerViewConfigEntry, host: str) -> PowerViewHub:
         hub = PowerViewHub(async_get_clientsession(hass), host,
                            timing=timing_from(entry.options), read_only=True)
-        made.append(hub.client)
+        made.append(hub)
         return hub
 
     monkeypatch.setattr("custom_components.powerview_connect.new_hub", new_hub)
-    monkeypatch.setattr("custom_components.powerview_connect.config_flow.new_client", new_client)
     yield made
 
 
 async def test_a_real_gateway_is_added_and_every_shade_is_a_cover(
-    hass: HomeAssistant, read_only: list[PowerViewClient]
+    hass: HomeAssistant, read_only: list[PowerViewHub]
 ) -> None:
     started = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     # HA declares the flow manager's user input as a bare `dict`.
@@ -89,7 +83,7 @@ async def test_a_real_gateway_is_added_and_every_shade_is_a_cover(
     assert entry.state is ConfigEntryState.LOADED
 
     runtime: PowerViewRuntime = entry.runtime_data
-    assert read_only and all(client.read_only for client in read_only)
+    assert read_only and all(hub.read_only for hub in read_only)
     await until(lambda: runtime.hub.connection is Connection.CONNECTED, timeout=15)
     covers = hass.states.async_all("cover")
     assert len(covers) >= len(runtime.hub.shades) > 0

@@ -10,7 +10,7 @@ from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from powerview_connect import Connection, EventKind, SystemClock
+from powerview_connect import Connection
 from powerview_connect.testing import ManualClock, SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -43,7 +43,7 @@ async def test_the_gateway_and_each_shade_are_devices(
     assert (gateway.name, gateway.model, gateway.sw_version, gateway.serial_number) == (
         "Simulated Gateway", "PowerView Gen 3 Gateway Pro", "3.2.59", SERIAL)
     await until(lambda: _hardware(devices, gateway.id) == "3.0.4")
-    assert gateway.configuration_url == f"http://{loaded.hub.client.host}/home"
+    assert gateway.configuration_url == f"{loaded.hub.base_url}/home"
     shade = devices.async_get_device_by_identifier(
         (DOMAIN, f"{SERIAL}_{TDBU}"), config_entry.entry_id
     )
@@ -174,7 +174,7 @@ async def test_a_refresh_takes_positions_changed_without_an_event(
 
 def test_a_hub_keeps_the_time_of_the_event_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.undo()
-    assert isinstance(runtime.new_clock(), SystemClock)
+    assert runtime.new_clock() is None
 
 
 def test_the_poll_and_refresh_intervals_are_options() -> None:
@@ -224,8 +224,8 @@ async def test_a_shade_the_gateway_reports_offline_is_unavailable_until_it_is_ba
 async def test_events_of_other_kinds_and_other_shades_change_nothing(
     hass: HomeAssistant, loaded: PowerViewRuntime, gateway: SimulatedGateway
 ) -> None:
-    gateway.emit(EventKind.BATTERY_ALERT, TDBU, batteryLevel=1)
-    gateway.emit(EventKind.MOTION_STARTED, 999, targetPositions={"primary": 1})
+    gateway.emit("battery-alert", TDBU, batteryLevel=1)
+    gateway.emit("motion-started", 999, targetPositions={"primary": 1})
     gateway.set_online(BOTTOM_UP, False)
     await until(lambda: state(hass, BOTTOM_UP_COVER).state == STATE_UNAVAILABLE)
     assert not loaded.hub.shade(TDBU).moving

@@ -20,7 +20,7 @@ from .const import (
     DEFAULT_REFRESH_MINUTES,
     DOMAIN,
 )
-from .runtime import PowerViewConfigEntry, new_client
+from .runtime import PowerViewConfigEntry, new_probe
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,20 +64,21 @@ class PowerViewConfigFlow(ConfigFlow, domain=DOMAIN):
         """
         if not host:
             raise FlowError("invalid_host")
-        client = new_client(self.hass, host)
+        probe = new_probe(self.hass, host)
         try:
-            home = await client.get_home()
+            await probe.load()
         except PowerViewError as err:
-            _LOGGER.debug("No PowerView gateway answers at %s: %s", client.host, err)
+            _LOGGER.debug("No PowerView gateway answers at %s: %s", probe.host, err)
             raise FlowError("cannot_connect") from err
-        primary, here = home.primary_gateway, home.gateway_at(client.host)
+        home = probe.home
+        primary, here = home.primary_gateway, home.gateway_at(probe.host)
         if primary is None:
             raise FlowError("cannot_connect")
         if here is not None and not here.is_primary:
             raise FlowError("not_primary", primary=primary.ip or primary.name)
         if not home.shades:
             raise FlowError("no_shades")
-        return FoundGateway(client.host, primary.serial, f"PowerView {primary.name}")
+        return FoundGateway(probe.host, primary.serial, f"PowerView {primary.name}")
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Ask for the primary gateway's address, and add its home."""

@@ -61,9 +61,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) ->
         raise ConfigEntryNotReady(
             translation_domain=DOMAIN,
             translation_key="cannot_connect",
-            translation_placeholders={"host": hub.client.host},
+            translation_placeholders={"host": hub.host},
         ) from err
-    runtime = PowerViewRuntime(hub, entry.unique_id or hub.client.host)
+    runtime = PowerViewRuntime(hub, entry.unique_id or hub.host)
     entry.runtime_data = runtime
     registry = dr.async_get(hass)
     _register_gateways(registry, entry)
