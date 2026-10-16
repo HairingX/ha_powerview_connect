@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
@@ -36,11 +36,22 @@ from .const import (
     SSE_BACKOFF,
     SSE_IDLE_TIMEOUT,
 )
+from .redact import REDACTIONS
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER.addFilter(REDACTIONS)
 
 type PowerViewConfigEntry = ConfigEntry[PowerViewHub]
 type Listener = Callable[[], None]
+
+
+async def _timed[T](what: str, request: Awaitable[T]) -> T:
+    """The answer to `request`, with how long it took logged."""
+    started = time.monotonic()
+    try:
+        return await request
+    finally:
+        _LOGGER.debug("%s took %.2f s", what, time.monotonic() - started)
 
 
 def new_client(hass: HomeAssistant, host: str) -> PowerViewClient:
@@ -63,6 +74,7 @@ class PowerViewHub:
         self.entry = entry
         self.client = client
         self.home = home
+        REDACTIONS.add_home(home)
         self.unique_id: str = entry.unique_id or client.host
         self.gateway: Gateway | None = home.gateway_at(client.host) or home.primary_gateway
         self.signal_strengths: dict[int, int | None] = {
@@ -155,7 +167,7 @@ class PowerViewHub:
         The entry reloads when the home's shades or scenes have changed.
         """
         try:
-            home = await self.client.get_home()
+            home = await _timed("Reading the home", self.client.get_home())
         except PowerViewError as err:
             _LOGGER.debug("Reading the home at %s failed: %s", self.client.host, err)
             self._set_available(False)
@@ -205,6 +217,7 @@ class PowerViewHub:
 
     @callback
     def _handle(self, event: ShadeEvent) -> None:
+        _LOGGER.debug("Event: %s", event)
         tracker = self.trackers.get(event.shade_id)
         if tracker is None:
             return
@@ -243,7 +256,7 @@ class PowerViewHub:
         tracker = self.trackers[shade_id]
         try:
             async with self._poll_slots:
-                shade = await self.client.get_shade(shade_id)
+                shade = await _timed(f"Reading shade {shade_id}", self.client.get_shade(shade_id))
         except PowerViewError as err:
             _LOGGER.debug("Reading shade %s failed: %s", shade_id, err)
             # The timeouts still end a move the shade can no longer be asked about.
@@ -264,12 +277,12 @@ class PowerViewHub:
             HomeAssistantError: the gateway did not take the move.
         """
         try:
-            await self.client.set_positions(
+            await _timed(f"Moving shade {shade_id} to {targets}", self.client.set_positions(
                 [shade_id],
                 primary=targets.get(Rail.PRIMARY),
                 secondary=targets.get(Rail.SECONDARY),
                 tilt=targets.get(Rail.TILT),
-            )
+            ))
         except PowerViewError as err:
             raise _command_failed(err) from err
         if self.trackers[shade_id].command(self.clock(), targets):
@@ -283,7 +296,7 @@ class PowerViewHub:
             HomeAssistantError: the gateway did not take the stop.
         """
         try:
-            await self.client.stop([shade_id])
+            await _timed(f"Stopping shade {shade_id}", self.client.stop([shade_id]))
         except PowerViewError as err:
             raise _command_failed(err) from err
         tracker = self.trackers[shade_id]
@@ -299,7 +312,7 @@ class PowerViewHub:
             HomeAssistantError: the gateway did not take the command.
         """
         try:
-            await self.client.jog(shade_id)
+            await _timed(f"Jogging shade {shade_id}", self.client.jog(shade_id))
         except PowerViewError as err:
             raise _command_failed(err) from err
 
@@ -310,7 +323,7 @@ class PowerViewHub:
             HomeAssistantError: the gateway did not take the scene.
         """
         try:
-            await self.client.activate_scene(scene_id)
+            await _timed(f"Activating scene {scene_id}", self.client.activate_scene(scene_id))
         except PowerViewError as err:
             raise _command_failed(err) from err
 
@@ -319,5 +332,5 @@ def _command_failed(err: PowerViewError) -> HomeAssistantError:
     return HomeAssistantError(
         translation_domain=DOMAIN,
         translation_key="command_failed",
-        translation_placeholders={"error": str(err)},
+        translation_placeholders={"error": REDACTIONS.redact(str(err))},
     )
