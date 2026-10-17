@@ -98,6 +98,24 @@ and its history stays. Reconfigure refuses another home's gateway.
 |---|---|---|
 | Read a moving shade every | 1 s | How often a moving shade's position is read. A shade standing still is never read. |
 | Read the whole home every | 10 min | How often every shade is read, in case an event was missed. |
+| Raise curtains that stop short of fully open | off | See below. |
+| Pause between steps | 10 s | How long to wait after each step has stopped, before checking it rose. |
+| Lowest position counted as stuck | 80 % | A curtain that stops below this was stopped on purpose, and is left there. |
+
+**Curtains that stop short of fully open.** A curtain sent fully open sometimes stops a little
+short, as the fabric gathering at the top takes room. With the option on, such a curtain is
+raised the rest of the way in three smaller steps, which let the fabric fold. It works whoever
+opened it: Home Assistant, the PowerView app, a voice assistant or a scene. Only a curtain's
+single cover and the bottom rail of a top-down/bottom-up shade (while its top rail is at the
+top) are raised. Anything else moving or stopping the shade meanwhile ends it.
+
+Each time it starts and ends, Home Assistant gets the event `powerview_connect_shade_stalled`:
+
+| Field | |
+|---|---|
+| `entity_id` | the cover |
+| `outcome` | `recovering` as it starts; then `recovered` (fully open), `gave_up` (a step did not raise it) or `interrupted` (something else moved or stopped it) |
+| `position` | where the cover is, 0-100: where it stopped as it starts, where it ended as it ends |
 
 ## What you get
 
@@ -206,6 +224,24 @@ cards:
       data:
         top: 0
         bottom: 0
+```
+
+A notification when a curtain could not be raised all the way:
+
+```yaml
+automation:
+  - alias: "Shades: tell me when a curtain stays stuck"
+    triggers:
+      - trigger: event
+        event_type: powerview_connect_shade_stalled
+        event_data:
+          outcome: gave_up
+    actions:
+      - action: notify.notify
+        data:
+          message: >
+            {{ state_attr(trigger.event.data.entity_id, 'friendly_name') }} stopped at
+            {{ trigger.event.data.position }} %.
 ```
 
 Lower the top rail at sunset, leaving the bottom rail where it is:

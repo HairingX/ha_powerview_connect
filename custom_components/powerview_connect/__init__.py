@@ -15,10 +15,16 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import service
 from homeassistant.helpers.typing import ConfigType
-from powerview_connect import Change, GatewayChanged, HomeChanged, PowerViewError
+from powerview_connect import Change, GatewayChanged, HomeChanged, PowerViewError, ShadeStalled
 
-from .const import ATTR_BOTTOM, ATTR_TOP, DOMAIN, SERVICE_SET_POSITIONS
-from .entity import gateway_device, gateway_identifier, shade_device, shade_identifier
+from .const import ATTR_BOTTOM, ATTR_TOP, DOMAIN, EVENT_SHADE_STALLED, SERVICE_SET_POSITIONS
+from .entity import (
+    cover_unique_id,
+    gateway_device,
+    gateway_identifier,
+    shade_device,
+    shade_identifier,
+)
 from .runtime import PowerViewConfigEntry, PowerViewRuntime, new_hub
 
 PLATFORMS: list[Platform] = [
@@ -113,7 +119,8 @@ def _register_gateways(registry: dr.DeviceRegistry, entry: PowerViewConfigEntry)
 
 @callback
 def _follow(hass: HomeAssistant, entry: PowerViewConfigEntry, change: Change) -> None:
-    """Keep the devices as the home is: added, changed and removed shades and gateways."""
+    """Keep the devices as the home is: added, changed and removed shades and gateways; and tell
+    automations of a curtain that stopped short of fully open."""
     runtime = entry.runtime_data
     registry = dr.async_get(hass)
     match change:
@@ -133,6 +140,12 @@ def _follow(hass: HomeAssistant, entry: PowerViewConfigEntry, change: Change) ->
             if diff.removed_shades or diff.removed_gateways or diff.removed_scenes:
                 _remove_stale_devices(registry, entry)
                 _remove_scenes(hass, entry, diff.removed_scenes)
+        case ShadeStalled(shade_id, role, openness, outcome):
+            entity_id = er.async_get(hass).async_get_entity_id(
+                COVER_DOMAIN, DOMAIN, cover_unique_id(runtime, shade_id, role))
+            hass.bus.async_fire(EVENT_SHADE_STALLED, {
+                "entity_id": entity_id, "outcome": str(outcome),
+                "position": None if openness is None else round(openness * 100)})
         case GatewayChanged(state) if state.status is not None:
             # A gateway is asked only once the home that lists it has given it a device.
             registry.async_update_device(

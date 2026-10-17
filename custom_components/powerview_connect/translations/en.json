@@ -50,11 +50,17 @@
         "title": "PowerView options",
         "data": {
           "motion_poll_interval": "Read a moving shade every (seconds)",
-          "refresh_minutes": "Read the whole home every (minutes)"
+          "refresh_minutes": "Read the whole home every (minutes)",
+          "raise_stalled": "Raise curtains that stop short of fully open",
+          "stall_pause": "Pause between steps (seconds)",
+          "stall_min_position": "Lowest position counted as stuck (%)"
         },
         "data_description": {
           "motion_poll_interval": "How often a moving shade's position is read. A shade standing still is never read.",
-          "refresh_minutes": "How often every shade is read, in case an event from the gateway was missed."
+          "refresh_minutes": "How often every shade is read, in case an event from the gateway was missed.",
+          "raise_stalled": "A curtain sent fully open that stops a little short, as gathered fabric can make it, is raised the rest of the way in three smaller steps, whoever opened it.",
+          "stall_pause": "How long to wait after each step has stopped, before checking it rose.",
+          "stall_min_position": "A curtain that stops below this was stopped on purpose, and is left there."
         }
       }
     }
