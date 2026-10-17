@@ -9,13 +9,18 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from powerview_connect import Clock, PowerViewError, PowerViewHub, Timing
+from powerview_connect import Clock, PowerViewError, PowerViewHub, StallRecovery, Timing
 
 from .const import (
     CONF_MOTION_POLL_INTERVAL,
+    CONF_RAISE_STALLED,
     CONF_REFRESH_MINUTES,
+    CONF_STALL_MIN_POSITION,
+    CONF_STALL_PAUSE,
     DEFAULT_MOTION_POLL_INTERVAL,
     DEFAULT_REFRESH_MINUTES,
+    DEFAULT_STALL_MIN_POSITION,
+    DEFAULT_STALL_PAUSE,
     DOMAIN,
 )
 
@@ -64,10 +69,24 @@ def timing_from(options: Mapping[str, object]) -> Timing:
     )
 
 
+def stall_recovery_from(options: Mapping[str, object]) -> StallRecovery | None:
+    """How the hub raises curtains that stop short of fully open, with the entry's options; None
+    when it does not."""
+    if options.get(CONF_RAISE_STALLED) is not True:
+        return None
+    pause = options.get(CONF_STALL_PAUSE, DEFAULT_STALL_PAUSE)
+    lowest = options.get(CONF_STALL_MIN_POSITION, DEFAULT_STALL_MIN_POSITION)
+    return StallRecovery(
+        min_openness=(lowest if isinstance(lowest, int | float) else DEFAULT_STALL_MIN_POSITION)
+        / 100,
+        pause=float(pause) if isinstance(pause, int | float) else DEFAULT_STALL_PAUSE,
+    )
+
+
 def new_hub(hass: HomeAssistant, entry: PowerViewConfigEntry, host: str) -> PowerViewHub:
     """A hub for the primary gateway at `host`, on Home Assistant's shared web session."""
     return PowerViewHub(async_get_clientsession(hass), host, timing=timing_from(entry.options),
-                        clock=new_clock())
+                        clock=new_clock(), stall_recovery=stall_recovery_from(entry.options))
 
 
 async def run_command(command: Awaitable[None]) -> None:

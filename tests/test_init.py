@@ -10,13 +10,17 @@ from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from powerview_connect import Connection
+from powerview_connect import Connection, StallRecovery
 from powerview_connect.testing import ManualClock, SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.powerview_connect import async_remove_config_entry_device, runtime
 from custom_components.powerview_connect.const import DOMAIN
-from custom_components.powerview_connect.runtime import PowerViewRuntime, timing_from
+from custom_components.powerview_connect.runtime import (
+    PowerViewRuntime,
+    stall_recovery_from,
+    timing_from,
+)
 
 from .conftest import BOTTOM_UP, SERIAL, TDBU, P, S, state, tick_until, until
 
@@ -183,6 +187,18 @@ def test_the_poll_and_refresh_intervals_are_options() -> None:
     default = timing_from({})
     assert (default.refresh_interval, default.poll_interval) == (600.0, 1.0)
     assert timing_from({"refresh_minutes": "x", "motion_poll_interval": None}) == default
+
+
+def test_curtains_that_stop_short_are_raised_only_when_the_option_is_on() -> None:
+    assert stall_recovery_from({}) is None
+    assert stall_recovery_from({"raise_stalled": False, "stall_pause": 5.0}) is None
+    assert stall_recovery_from({"raise_stalled": True}) == StallRecovery(0.8, 3, 10.0)
+    assert stall_recovery_from(
+        {"raise_stalled": True, "stall_pause": 4, "stall_min_position": 90}
+    ) == StallRecovery(0.9, 3, 4.0)
+    assert stall_recovery_from(
+        {"raise_stalled": True, "stall_pause": "x", "stall_min_position": None}
+    ) == StallRecovery(0.8, 3, 10.0)
 
 
 async def test_entities_are_unavailable_while_the_gateway_does_not_answer(

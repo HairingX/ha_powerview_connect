@@ -13,6 +13,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from powerview_connect import (
     Change,
     ConnectionChanged,
+    CoverRole,
     Gateway,
     GatewayState,
     HomeChanged,
@@ -34,6 +35,16 @@ def gateway_identifier(runtime: PowerViewRuntime, gateway: Gateway | None = None
 def shade_identifier(runtime: PowerViewRuntime, shade_id: int) -> tuple[str, str]:
     """The device registry identifier of a shade."""
     return (DOMAIN, f"{runtime.unique_id}_{shade_id}")
+
+
+ONE_OF_TWO = frozenset({CoverRole.TOP, CoverRole.BOTTOM, CoverRole.FRONT, CoverRole.REAR})
+"""Roles of a shade with two covers: each is named, and its unique id carries the role."""
+
+
+def cover_unique_id(runtime: PowerViewRuntime, shade_id: int, role: CoverRole) -> str:
+    """The unique id of a shade's cover: the shade's, with the role where the shade has two."""
+    base = f"{runtime.unique_id}_{shade_id}"
+    return f"{base}_{role}" if role in ONE_OF_TWO else base
 
 
 def gateway_device(runtime: PowerViewRuntime, gateway: Gateway | None) -> DeviceInfo:
