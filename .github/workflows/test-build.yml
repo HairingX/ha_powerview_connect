@@ -66,8 +66,9 @@ jobs:
           tag_name=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
             --jq '[.[] | select(.draft)] | sort_by(.created_at) | reverse | .[0].tag_name // empty')
           if [[ -z "$tag_name" ]]; then
-            echo "::error::No draft release to take the next version from."
-            exit 1
+            # Nothing merged since the last release leaves no draft: the next patch is the base.
+            latest=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+            tag_name=$(python .github/scripts/test_build.py next-patch "${latest#v}")
           fi
           version=$(python .github/scripts/test_build.py version "${tag_name#v}")
           echo "Test build $version of $GITHUB_REF_NAME"
