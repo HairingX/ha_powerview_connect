@@ -63,7 +63,10 @@ class PowerViewRuntime:
         return self.retries.setdefault((shade_id, role), RetrySettings())
 
     def apply_retry(self, shade_id: int, role: CoverRole) -> None:
-        """Give the hub the cover's settings for retrying a stalled opening, or none while off."""
+        """Give the hub the cover's settings for retrying a stalled opening, or none while off;
+        nothing for a shade the hub no longer has."""
+        if shade_id not in self.hub.shades:
+            return
         settings = self.retry(shade_id, role)
         self.hub.set_stalled_open_retry(shade_id, role, StalledOpenRetry(
             min_openness=settings.above / 100, delay=settings.delay) if settings.on else None)

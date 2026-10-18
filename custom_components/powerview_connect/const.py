@@ -2,8 +2,6 @@
 
 from typing import Final
 
-from powerview_connect import RetryOutcome
-
 DOMAIN: Final = "powerview_connect"
 MANUFACTURER: Final = "Hunter Douglas"
 
@@ -16,17 +14,10 @@ DEFAULT_REFRESH_MINUTES: Final = 10
 
 DEFAULT_RETRY_DELAY: Final = 90.0
 """Seconds to let the fabric settle after each step that retries a stalled opening."""
-DEFAULT_RETRY_ABOVE: Final = 80
+DEFAULT_RETRY_ABOVE: Final = 80.0
 """The lowest position, in percent, at which an opening that stops counts as stalled."""
 
 EVENT_SHADE_STALLED: Final = f"{DOMAIN}_shade_stalled"
-STALL_OUTCOMES: Final[dict[RetryOutcome, str]] = {
-    RetryOutcome.STARTED: "started",
-    RetryOutcome.OPENED: "opened",
-    RetryOutcome.GAVE_UP: "gave_up",
-    RetryOutcome.INTERRUPTED: "interrupted",
-}
-"""The stalled event's `outcome` for each outcome of a retry; one not listed fires no event."""
 
 SERVICE_SET_POSITIONS: Final = "set_positions"
 ATTR_TOP: Final = "top"

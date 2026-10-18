@@ -38,8 +38,8 @@ class PowerViewRetryNumber(PowerViewShadeEntity, RestoreNumber):
 
     _attr_entity_category = EntityCategory.CONFIG
     _attr_mode = NumberMode.BOX
-    _key = ""
-    """The setting's name: its field of `RetrySettings`, and the end of its keys."""
+    _key: str
+    """The end of the setting's translation key and unique id."""
 
     def __init__(
         self, runtime: PowerViewRuntime, shade_id: int, role: CoverRole, cover_id: str
@@ -51,11 +51,9 @@ class PowerViewRetryNumber(PowerViewShadeEntity, RestoreNumber):
         self._attr_unique_id = f"{cover_id}_retry_stalled_opening_{self._key}"
         self._update()
 
-    def _value(self, settings: RetrySettings) -> float:
-        return float(getattr(settings, self._key))
+    def _value(self, settings: RetrySettings) -> float: ...
 
-    def _store(self, settings: RetrySettings, value: float) -> None:
-        setattr(settings, self._key, value)
+    def _store(self, settings: RetrySettings, value: float) -> None: ...
 
     async def async_added_to_hass(self) -> None:
         """Take the value it had before Home Assistant restarted, and follow the shade."""
@@ -85,6 +83,12 @@ class PowerViewRetryDelay(PowerViewRetryNumber):
     _attr_native_step = 1
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
 
+    def _value(self, settings: RetrySettings) -> float:
+        return settings.delay
+
+    def _store(self, settings: RetrySettings, value: float) -> None:
+        settings.delay = value
+
 
 class PowerViewRetryAbove(PowerViewRetryNumber):
     """The lowest position at which a stop of an opening counts as stalled."""
@@ -94,3 +98,9 @@ class PowerViewRetryAbove(PowerViewRetryNumber):
     _attr_native_max_value = 99
     _attr_native_step = 1
     _attr_native_unit_of_measurement = PERCENTAGE
+
+    def _value(self, settings: RetrySettings) -> float:
+        return settings.above
+
+    def _store(self, settings: RetrySettings, value: float) -> None:
+        settings.above = value

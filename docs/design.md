@@ -61,9 +61,7 @@ protocol.
   a restart by Home Assistant (`RestoreEntity`, `RestoreNumber`). A switch disabled or removed
   turns the retry off. The integration turns each `ShadeStalled` into the event
   `powerview_connect_shade_stalled`, naming the cover by the entity id the registry has for its
-  unique id, so automations can tell the user. The event's `outcome` is the integration's own
-  word for each outcome, not the library's value, so the event changes only when the
-  integration changes it: an outcome it has no word for fires no event.
+  unique id, so automations can tell the user; a cover without an entity fires none.
 - **Time**: the hub keeps time by `runtime.new_clock`, the event loop's own. The tests replace
   it with the library's `ManualClock`, so time passes only when a test advances it.
 
@@ -109,13 +107,6 @@ Bluetooth names out.
   hard-wired shade has neither, as it reports `batteryStatus` 3 too, and a shade that reports no
   power type is not taken to have a battery. The levels are the Gen 3 API's, not yet measured on
   a battery shade.
-- **What users build on stays as it is.** Their entity ids, history and automations hang on the
-  unique ids, the translation keys and the stalled event's name and fields, so those change
-  only in a breaking release, with a migration of the registry where one can be made. A cover's
-  unique id holds its role's value, which the library keeps stable. Which covers a shade has
-  comes from the library, by its capabilities, and changes only in a breaking release of it;
-  such a change needs a migration here, so that each cover keeps its unique id. The event may
-  gain fields, and its outcomes are the integration's own words.
 
 ## Dependencies
 

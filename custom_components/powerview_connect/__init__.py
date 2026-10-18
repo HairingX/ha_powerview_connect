@@ -17,14 +17,7 @@ from homeassistant.helpers import service
 from homeassistant.helpers.typing import ConfigType
 from powerview_connect import Change, GatewayChanged, HomeChanged, PowerViewError, ShadeStalled
 
-from .const import (
-    ATTR_BOTTOM,
-    ATTR_TOP,
-    DOMAIN,
-    EVENT_SHADE_STALLED,
-    SERVICE_SET_POSITIONS,
-    STALL_OUTCOMES,
-)
+from .const import ATTR_BOTTOM, ATTR_TOP, DOMAIN, EVENT_SHADE_STALLED, SERVICE_SET_POSITIONS
 from .entity import (
     cover_unique_id,
     gateway_device,
@@ -148,12 +141,13 @@ def _follow(hass: HomeAssistant, entry: PowerViewConfigEntry, change: Change) ->
             if diff.removed_shades or diff.removed_gateways or diff.removed_scenes:
                 _remove_stale_devices(registry, entry)
                 _remove_scenes(hass, entry, diff.removed_scenes)
-        case ShadeStalled(shade_id=shade_id, role=role, openness=openness,
-                          outcome=outcome) if outcome in STALL_OUTCOMES:
+        case ShadeStalled(shade_id=shade_id, role=role, openness=openness, outcome=outcome):
             entity_id = er.async_get(hass).async_get_entity_id(
                 COVER_DOMAIN, DOMAIN, cover_unique_id(runtime, shade_id, role))
+            if entity_id is None:
+                return
             hass.bus.async_fire(EVENT_SHADE_STALLED, {
-                "entity_id": entity_id, "outcome": STALL_OUTCOMES[outcome],
+                "entity_id": entity_id, "outcome": str(outcome),
                 "position": None if openness is None else round(openness * 100)})
         case GatewayChanged(state=state) if state.status is not None:
             # A gateway is asked only once the home that lists it has given it a device.
@@ -175,7 +169,8 @@ def _remove_scenes(hass: HomeAssistant, entry: PowerViewConfigEntry, scene_ids: 
 
 @callback
 def _remove_lost_entities(hass: HomeAssistant, entry: PowerViewConfigEntry) -> None:
-    """Remove the entities this version no longer makes, so none is left unavailable."""
+    """Remove the entities the home no longer gives, such as a scene deleted while Home Assistant
+    was stopped, so none is left unavailable."""
     registry = er.async_get(hass)
     for found in er.async_entries_for_config_entry(registry, entry.entry_id):
         if found.unique_id not in entry.runtime_data.unique_ids:

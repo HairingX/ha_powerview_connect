@@ -63,8 +63,7 @@ class PowerViewRetrySwitch(PowerViewShadeEntity, SwitchEntity, RestoreEntity):  
 
     def _set(self, on: bool) -> None:
         self.runtime.retry(self.shade_id, self._role).on = on
-        if self.shade_id in self.hub.shades:
-            self.runtime.apply_retry(self.shade_id, self._role)
+        self.runtime.apply_retry(self.shade_id, self._role)
 
     def _update(self) -> None:
         super()._update()

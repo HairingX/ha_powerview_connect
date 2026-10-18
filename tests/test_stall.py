@@ -7,7 +7,6 @@ import asyncio
 from collections.abc import Sequence
 from typing import Any
 
-import pytest
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
@@ -22,7 +21,6 @@ from powerview_connect import (
     Connection,
     CoverRole,
     PowerViewHub,
-    RetryOutcome,
     StalledOpenRetry,
 )
 from powerview_connect.testing import ManualClock, SimulatedGateway
@@ -32,7 +30,7 @@ from pytest_homeassistant_custom_component.common import (
     mock_restore_cache_with_extra_data,
 )
 
-from custom_components.powerview_connect.const import EVENT_SHADE_STALLED, STALL_OUTCOMES
+from custom_components.powerview_connect.const import EVENT_SHADE_STALLED
 from custom_components.powerview_connect.runtime import PowerViewRuntime
 
 from .conftest import BOTTOM_UP, TDBU, P, S, state, tick, until
@@ -150,19 +148,24 @@ async def test_switching_the_retry_off_during_one_ends_it(
     assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
 
 
-async def test_an_outcome_the_integration_has_no_word_for_fires_no_event(
-    hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime,
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+async def test_a_stall_of_a_cover_without_an_entity_fires_no_event(
+    hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime
 ) -> None:
-    monkeypatch.delitem(STALL_OUTCOMES, RetryOutcome.STARTED)
     await _switch(hass, PATIO_SWITCH, True)
+    er.async_get(hass).async_remove(PATIO)
     events = async_capture_events(hass, EVENT_SHADE_STALLED)
     await _opened_by_the_app(hass, gateway, loaded, BOTTOM_UP, 0.9)
     await until(lambda: len([found for found in gateway.requests if found.method == "PUT"]) == 2)
-    await _switch(hass, PATIO_SWITCH, False)
-    await until(lambda: len(events) == 1)
-    assert events[0].data["outcome"] == "interrupted"
-    assert "listener failed" not in caplog.text
+    await asyncio.sleep(0.05)
+    assert events == []
+
+
+async def test_settings_for_a_shade_the_hub_no_longer_has_reach_nothing(
+    loaded: PowerViewRuntime,
+) -> None:
+    loaded.retry(9999, CoverRole.SHADE).on = True
+    loaded.apply_retry(9999, CoverRole.SHADE)
+    assert 9999 not in loaded.hub.shades
 
 
 async def test_a_shade_with_the_retry_off_whose_opening_stalls_is_left_there(
