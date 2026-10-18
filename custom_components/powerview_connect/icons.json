@@ -56,6 +56,11 @@
           "wifi": "mdi:wifi"
         }
       }
+    },
+    "switch": {
+      "raise_when_stuck": {
+        "default": "mdi:arrow-collapse-up"
+      }
     }
   },
   "services": {

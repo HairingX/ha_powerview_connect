@@ -66,6 +66,10 @@ async def test_the_gateway_and_each_shade_are_devices(
         "sensor.bedroom_roller_signal_strength", "sensor.bedroom_skylight_signal_strength",
         "sensor.living_room_kitchen_window_signal_strength",
         "sensor.living_room_patio_door_signal_strength", "sensor.simulated_gateway_network",
+        "switch.bedroom_roller_raise_if_it_stops_short",
+        "switch.bedroom_skylight_raise_if_it_stops_short",
+        "switch.living_room_kitchen_window_raise_if_it_stops_short",
+        "switch.living_room_patio_door_raise_if_it_stops_short",
     ]
 
 
@@ -189,16 +193,12 @@ def test_the_poll_and_refresh_intervals_are_options() -> None:
     assert timing_from({"refresh_minutes": "x", "motion_poll_interval": None}) == default
 
 
-def test_curtains_that_stop_short_are_raised_only_when_the_option_is_on() -> None:
-    assert stall_recovery_from({}) is None
-    assert stall_recovery_from({"raise_stalled": False, "stall_pause": 5.0}) is None
-    assert stall_recovery_from({"raise_stalled": True}) == StallRecovery(0.8, 3, 10.0)
-    assert stall_recovery_from(
-        {"raise_stalled": True, "stall_pause": 4, "stall_min_position": 90}
-    ) == StallRecovery(0.9, 3, 4.0)
-    assert stall_recovery_from(
-        {"raise_stalled": True, "stall_pause": "x", "stall_min_position": None}
-    ) == StallRecovery(0.8, 3, 10.0)
+def test_how_curtains_that_stop_short_are_raised_are_options() -> None:
+    assert stall_recovery_from({}) == StallRecovery(0.8, 3, 10.0)
+    assert stall_recovery_from({"stall_pause": 4, "stall_min_position": 90}) == StallRecovery(
+        0.9, 3, 4.0)
+    assert stall_recovery_from({"stall_pause": "x", "stall_min_position": None}) == StallRecovery(
+        0.8, 3, 10.0)
 
 
 async def test_entities_are_unavailable_while_the_gateway_does_not_answer(

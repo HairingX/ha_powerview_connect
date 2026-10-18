@@ -12,10 +12,8 @@ DEFAULT_MOTION_POLL_INTERVAL: Final = 1.0
 DEFAULT_REFRESH_MINUTES: Final = 10
 """Minutes between two reads of the whole home, in case an event was missed."""
 
-CONF_RAISE_STALLED: Final = "raise_stalled"
 CONF_STALL_PAUSE: Final = "stall_pause"
 CONF_STALL_MIN_POSITION: Final = "stall_min_position"
-DEFAULT_RAISE_STALLED: Final = False
 DEFAULT_STALL_PAUSE: Final = 10.0
 """Seconds to wait after each step that raises a curtain the rest of the way."""
 DEFAULT_STALL_MIN_POSITION: Final = 80

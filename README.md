@@ -98,16 +98,18 @@ and its history stays. Reconfigure refuses another home's gateway.
 |---|---|---|
 | Read a moving shade every | 1 s | How often a moving shade's position is read. A shade standing still is never read. |
 | Read the whole home every | 10 min | How often every shade is read, in case an event was missed. |
-| Raise curtains that stop short of fully open | off | See below. |
-| Pause between steps | 10 s | How long to wait after each step has stopped, before checking it rose. |
+| Pause between steps | 10 s | How long to wait after each step has stopped, before checking it rose, when a curtain is raised (see below). |
 | Lowest position counted as stuck | 80 % | A curtain that stops below this was stopped on purpose, and is left there. |
 
 **Curtains that stop short of fully open.** A curtain sent fully open sometimes stops a little
-short, as the fabric gathering at the top takes room. With the option on, such a curtain is
-raised the rest of the way in three smaller steps, which let the fabric fold. It works whoever
-opened it: Home Assistant, the PowerView app, a voice assistant or a scene. Only a curtain's
-single cover and the bottom rail of a top-down/bottom-up shade (while its top rail is at the
-top) are raised. Anything else moving or stopping the shade meanwhile ends it.
+short, as the fabric gathering at the top takes room. Each shade that can be raised has a
+switch under its device's **Configuration**, **Raise if it stops short**, off until you turn it
+on, and kept across restarts. With it on, the curtain is raised the rest of the way in three
+smaller steps, which let the fabric fold, whoever opened it: Home Assistant, the PowerView app,
+a voice assistant or a scene. Only a shade's single cover and the bottom rail of a
+top-down/bottom-up shade (while its top rail is at the top) are raised. Anything else moving or
+stopping the shade meanwhile ends it, and so does turning the switch off; an automation can
+turn it off and on, at night for one.
 
 Each time it starts and ends, Home Assistant gets the event `powerview_connect_shade_stalled`:
 

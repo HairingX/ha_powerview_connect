@@ -38,7 +38,7 @@ and Home Assistant's actions into the hub's commands. It knows nothing of the ga
 protocol.
 
 - **Setup** makes the hub (`runtime.new_hub`, with the entry's options as its `Timing` and its
-  `StallRecovery`, or none while that option is off) and
+  `StallRecovery`) and
   loads the home; a gateway that does not answer makes the entry retry later. It registers
   each gateway's device, adds the platforms, and runs the hub's `run` as the entry's
   background task, which Home Assistant cancels when the entry unloads: nothing the hub does
@@ -55,7 +55,12 @@ protocol.
   without a reload; one removed, once the hub has missed it in two reads in a row, has its
   device or scene removed; a shade renamed, moved to another room or gateway, or with new
   firmware has its device updated. A gateway's hardware and firmware follow what it reports.
-- **Curtains that stop short** are the hub's to raise. The integration turns each `ShadeStalled`
+- **Curtains that stop short** are the hub's to raise, for the shades turned on for it. Each
+  shade with a `recoverable` cover has a configuration switch that turns it on in the hub; the
+  shades turned on are kept in Home Assistant's storage for the entry (`runtime.raised_store`),
+  turned on again at setup, and forgotten when the entry is removed. The switch does not
+  restore its own state, as a restored switch cannot be typed strictly. The integration turns
+  each `ShadeStalled`
   into the event `powerview_connect_shade_stalled`, naming the cover by the entity id the
   registry has for its unique id, so automations can tell the user.
 - **Time**: the hub keeps time by `runtime.new_clock`, the event loop's own. The tests replace
