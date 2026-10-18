@@ -58,9 +58,13 @@ async def test_the_gateway_and_each_shade_are_devices(
         "binary_sensor.simulated_gateway_internet", "cover.bedroom_blind", "cover.bedroom_roller",
         "cover.bedroom_skylight", "cover.living_room_kitchen_window_bottom",
         "cover.living_room_kitchen_window_top", "cover.living_room_patio_door",
+        "number.bedroom_roller_retry_stalled_opening_delay",
         "number.bedroom_roller_retry_stalled_opening_open_at_least",
+        "number.bedroom_skylight_retry_stalled_opening_delay",
         "number.bedroom_skylight_retry_stalled_opening_open_at_least",
+        "number.living_room_kitchen_window_retry_stalled_opening_delay",
         "number.living_room_kitchen_window_retry_stalled_opening_open_at_least",
+        "number.living_room_patio_door_retry_stalled_opening_delay",
         "number.living_room_patio_door_retry_stalled_opening_open_at_least",
         "scene.simulated_gateway_morning", "sensor.bedroom_roller_battery_level",
         "sensor.bedroom_roller_signal_strength", "sensor.bedroom_skylight_signal_strength",
@@ -251,21 +255,6 @@ def _position(hass: HomeAssistant, entity_id: str) -> int | None:
         return None
     position = state.attributes.get("current_position")
     return position if isinstance(position, int) else None
-
-
-async def test_a_retry_delay_of_an_earlier_version_is_removed(
-    hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway
-) -> None:
-    config_entry.add_to_hass(hass)
-    entities = er.async_get(hass)
-    gone = entities.async_get_or_create(
-        "number", DOMAIN, f"{SERIAL}_{BOTTOM_UP}_retry_stalled_opening_delay",
-        config_entry=config_entry)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    assert entities.async_get(gone.entity_id) is None
-    assert entities.async_get_entity_id(
-        "number", DOMAIN, f"{SERIAL}_{BOTTOM_UP}_retry_stalled_opening_min_openness") is not None
-    await hass.config_entries.async_unload(config_entry.entry_id)
 
 
 async def test_a_scene_deleted_while_home_assistant_was_stopped_is_removed(
