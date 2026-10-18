@@ -10,17 +10,13 @@ from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from powerview_connect import Connection, StallRecovery
+from powerview_connect import Connection
 from powerview_connect.testing import ManualClock, SimulatedGateway
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.powerview_connect import async_remove_config_entry_device, runtime
 from custom_components.powerview_connect.const import DOMAIN
-from custom_components.powerview_connect.runtime import (
-    PowerViewRuntime,
-    stall_recovery_from,
-    timing_from,
-)
+from custom_components.powerview_connect.runtime import PowerViewRuntime, timing_from
 
 from .conftest import BOTTOM_UP, SERIAL, TDBU, P, S, state, tick_until, until
 
@@ -62,14 +58,22 @@ async def test_the_gateway_and_each_shade_are_devices(
         "binary_sensor.simulated_gateway_internet", "cover.bedroom_blind", "cover.bedroom_roller",
         "cover.bedroom_skylight", "cover.living_room_kitchen_window_bottom",
         "cover.living_room_kitchen_window_top", "cover.living_room_patio_door",
+        "number.bedroom_roller_retry_stalled_opening_above",
+        "number.bedroom_roller_retry_stalled_opening_delay",
+        "number.bedroom_skylight_retry_stalled_opening_above",
+        "number.bedroom_skylight_retry_stalled_opening_delay",
+        "number.living_room_kitchen_window_retry_stalled_opening_above",
+        "number.living_room_kitchen_window_retry_stalled_opening_delay",
+        "number.living_room_patio_door_retry_stalled_opening_above",
+        "number.living_room_patio_door_retry_stalled_opening_delay",
         "scene.simulated_gateway_morning", "sensor.bedroom_roller_battery_level",
         "sensor.bedroom_roller_signal_strength", "sensor.bedroom_skylight_signal_strength",
         "sensor.living_room_kitchen_window_signal_strength",
         "sensor.living_room_patio_door_signal_strength", "sensor.simulated_gateway_network",
-        "switch.bedroom_roller_raise_if_it_stops_short",
-        "switch.bedroom_skylight_raise_if_it_stops_short",
-        "switch.living_room_kitchen_window_raise_if_it_stops_short",
-        "switch.living_room_patio_door_raise_if_it_stops_short",
+        "switch.bedroom_roller_retry_stalled_opening",
+        "switch.bedroom_skylight_retry_stalled_opening",
+        "switch.living_room_kitchen_window_retry_stalled_opening",
+        "switch.living_room_patio_door_retry_stalled_opening",
     ]
 
 
@@ -191,14 +195,6 @@ def test_the_poll_and_refresh_intervals_are_options() -> None:
     default = timing_from({})
     assert (default.refresh_interval, default.poll_interval) == (600.0, 1.0)
     assert timing_from({"refresh_minutes": "x", "motion_poll_interval": None}) == default
-
-
-def test_how_curtains_that_stop_short_are_raised_are_options() -> None:
-    assert stall_recovery_from({}) == StallRecovery(0.8, 3, 10.0)
-    assert stall_recovery_from({"stall_pause": 4, "stall_min_position": 90}) == StallRecovery(
-        0.9, 3, 4.0)
-    assert stall_recovery_from({"stall_pause": "x", "stall_min_position": None}) == StallRecovery(
-        0.8, 3, 10.0)
 
 
 async def test_entities_are_unavailable_while_the_gateway_does_not_answer(

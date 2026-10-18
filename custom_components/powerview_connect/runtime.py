@@ -9,29 +9,30 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.storage import Store
-from powerview_connect import Clock, PowerViewError, PowerViewHub, StallRecovery, Timing
+from powerview_connect import Clock, PowerViewError, PowerViewHub, StalledOpenRetry, Timing
 
 from .const import (
     CONF_MOTION_POLL_INTERVAL,
     CONF_REFRESH_MINUTES,
-    CONF_STALL_MIN_POSITION,
-    CONF_STALL_PAUSE,
     DEFAULT_MOTION_POLL_INTERVAL,
     DEFAULT_REFRESH_MINUTES,
-    DEFAULT_STALL_MIN_POSITION,
-    DEFAULT_STALL_PAUSE,
+    DEFAULT_RETRY_ABOVE,
+    DEFAULT_RETRY_DELAY,
     DOMAIN,
 )
 
 type PowerViewConfigEntry = ConfigEntry[PowerViewRuntime]
 
-_RAISED_VERSION = 1
 
+@dataclass(slots=True)
+class RetrySettings:
+    """A shade's settings for retrying an opening that stalls, as its entities hold them."""
 
-def raised_store(hass: HomeAssistant, entry_id: str) -> Store[list[int]]:
-    """Where an entry keeps the shades raised when they stop short of fully open."""
-    return Store(hass, _RAISED_VERSION, f"{DOMAIN}.{entry_id}.raised")
+    on: bool = False
+    delay: float = DEFAULT_RETRY_DELAY
+    """Seconds after each step, for the fabric to settle."""
+    above: float = DEFAULT_RETRY_ABOVE
+    """The lowest position, in percent, at which a stop counts as stalled."""
 
 
 @dataclass(slots=True)
@@ -41,20 +42,24 @@ class PowerViewRuntime:
     hub: PowerViewHub
     unique_id: str
     """The primary gateway's serial number, which every unique id starts with."""
-    raised: Store[list[int]]
-    """Where the shades raised when they stop short of fully open are kept across restarts."""
     device_ids: dict[str, str] = field(default_factory=lambda: {})
     """Each gateway's device id, by serial number."""
     primary_device_id: str = ""
     """The device id of the gateway the hub reaches."""
     unique_ids: set[str] = field(default_factory=lambda: set())
     """The unique id of every entity the entry has made, disabled ones included."""
+    retries: dict[int, RetrySettings] = field(default_factory=lambda: {})
+    """Each shade's settings for retrying a stalled opening."""
 
-    async def keep_raised(self) -> None:
-        """Keep which shades are raised when they stop short of fully open."""
-        hub = self.hub
-        await self.raised.async_save(
-            [shade_id for shade_id in sorted(hub.shades) if hub.stall_recovery_enabled(shade_id)])
+    def retry(self, shade_id: int) -> RetrySettings:
+        """A shade's settings for retrying a stalled opening, the defaults until set."""
+        return self.retries.setdefault(shade_id, RetrySettings())
+
+    def apply_retry(self, shade_id: int) -> None:
+        """Give the hub the shade's settings for retrying a stalled opening, or none while off."""
+        settings = self.retry(shade_id)
+        self.hub.set_stalled_open_retry(shade_id, StalledOpenRetry(
+            min_openness=settings.above / 100, delay=settings.delay) if settings.on else None)
 
     def via_device_id(self, shade_id: int) -> str:
         """The device id of the gateway that serves a shade."""
@@ -84,21 +89,10 @@ def timing_from(options: Mapping[str, object]) -> Timing:
     )
 
 
-def stall_recovery_from(options: Mapping[str, object]) -> StallRecovery:
-    """How the hub raises curtains that stop short of fully open, with the entry's options."""
-    pause = options.get(CONF_STALL_PAUSE, DEFAULT_STALL_PAUSE)
-    lowest = options.get(CONF_STALL_MIN_POSITION, DEFAULT_STALL_MIN_POSITION)
-    return StallRecovery(
-        min_openness=(lowest if isinstance(lowest, int | float) else DEFAULT_STALL_MIN_POSITION)
-        / 100,
-        pause=float(pause) if isinstance(pause, int | float) else DEFAULT_STALL_PAUSE,
-    )
-
-
 def new_hub(hass: HomeAssistant, entry: PowerViewConfigEntry, host: str) -> PowerViewHub:
     """A hub for the primary gateway at `host`, on Home Assistant's shared web session."""
     return PowerViewHub(async_get_clientsession(hass), host, timing=timing_from(entry.options),
-                        clock=new_clock(), stall_recovery=stall_recovery_from(entry.options))
+                        clock=new_clock())
 
 
 async def run_command(command: Awaitable[None]) -> None:

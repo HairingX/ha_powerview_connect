@@ -50,15 +50,11 @@
         "title": "PowerView options",
         "data": {
           "motion_poll_interval": "Read a moving shade every (seconds)",
-          "refresh_minutes": "Read the whole home every (minutes)",
-          "stall_pause": "Pause between steps (seconds)",
-          "stall_min_position": "Lowest position counted as stuck (%)"
+          "refresh_minutes": "Read the whole home every (minutes)"
         },
         "data_description": {
           "motion_poll_interval": "How often a moving shade's position is read. A shade standing still is never read.",
-          "refresh_minutes": "How often every shade is read, in case an event from the gateway was missed.",
-          "stall_pause": "How long to wait after each step has stopped, before checking it rose.",
-          "stall_min_position": "A curtain that stops below this was stopped on purpose, and is left there."
+          "refresh_minutes": "How often every shade is read, in case an event from the gateway was missed."
         }
       }
     }
@@ -125,8 +121,16 @@
       }
     },
     "switch": {
-      "raise_when_stuck": {
-        "name": "Raise if it stops short"
+      "retry_stalled_opening": {
+        "name": "Retry stalled opening"
+      }
+    },
+    "number": {
+      "retry_stalled_opening_delay": {
+        "name": "Retry stalled opening – delay"
+      },
+      "retry_stalled_opening_above": {
+        "name": "Retry stalled opening – above"
       }
     }
   },

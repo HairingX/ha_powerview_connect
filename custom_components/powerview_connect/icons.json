@@ -40,6 +40,14 @@
         }
       }
     },
+    "number": {
+      "retry_stalled_opening_delay": {
+        "default": "mdi:timer-sand"
+      },
+      "retry_stalled_opening_above": {
+        "default": "mdi:arrow-collapse-up"
+      }
+    },
     "sensor": {
       "battery_level": {
         "default": "mdi:battery",
@@ -58,8 +66,8 @@
       }
     },
     "switch": {
-      "raise_when_stuck": {
-        "default": "mdi:arrow-collapse-up"
+      "retry_stalled_opening": {
+        "default": "mdi:restart"
       }
     }
   },

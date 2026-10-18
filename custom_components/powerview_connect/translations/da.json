@@ -50,15 +50,11 @@
         "title": "PowerView-indstillinger",
         "data": {
           "motion_poll_interval": "Læs et gardin i bevægelse hvert (sekunder)",
-          "refresh_minutes": "Læs hele hjemmet hvert (minutter)",
-          "stall_pause": "Pause mellem trin (sekunder)",
-          "stall_min_position": "Laveste position, der regnes som fastkørt (%)"
+          "refresh_minutes": "Læs hele hjemmet hvert (minutter)"
         },
         "data_description": {
           "motion_poll_interval": "Hvor ofte et gardin i bevægelse får sin position læst. Et gardin, der står stille, læses aldrig.",
-          "refresh_minutes": "Hvor ofte alle gardiner læses, i tilfælde af at en hændelse fra gatewayen gik tabt.",
-          "stall_pause": "Hvor længe der ventes efter hvert trin, før det tjekkes, at gardinet kom op.",
-          "stall_min_position": "Et gardin, der stopper under denne position, er stoppet med vilje og bliver stående."
+          "refresh_minutes": "Hvor ofte alle gardiner læses, i tilfælde af at en hændelse fra gatewayen gik tabt."
         }
       }
     }
@@ -125,8 +121,16 @@
       }
     },
     "switch": {
-      "raise_when_stuck": {
-        "name": "Løft hvis det stopper før toppen"
+      "retry_stalled_opening": {
+        "name": "Prøv igen ved stop"
+      }
+    },
+    "number": {
+      "retry_stalled_opening_delay": {
+        "name": "Prøv igen ved stop – ventetid"
+      },
+      "retry_stalled_opening_above": {
+        "name": "Prøv igen ved stop – over"
       }
     }
   },

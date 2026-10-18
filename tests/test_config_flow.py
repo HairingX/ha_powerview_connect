@@ -236,12 +236,9 @@ async def test_reconfiguring_to_another_homes_gateway_is_refused(
 
 
 @pytest.mark.parametrize(("given", "stored"), [
-    ({}, {"motion_poll_interval": 1.0, "refresh_minutes": 10, "stall_pause": 10.0,
-          "stall_min_position": 80}),
-    ({"motion_poll_interval": "2.5", "refresh_minutes": 30, "stall_pause": "4",
-      "stall_min_position": 90},
-     {"motion_poll_interval": 2.5, "refresh_minutes": 30, "stall_pause": 4.0,
-      "stall_min_position": 90}),
+    ({}, {"motion_poll_interval": 1.0, "refresh_minutes": 10}),
+    ({"motion_poll_interval": "2.5", "refresh_minutes": 30},
+     {"motion_poll_interval": 2.5, "refresh_minutes": 30}),
 ])
 async def test_the_options_are_stored_and_the_home_reloaded(
     hass: HomeAssistant, config_entry: MockConfigEntry, loaded: PowerViewRuntime, given: dict[str, Any], stored: dict[str, Any]
@@ -265,12 +262,3 @@ async def test_the_options_refuse_a_read_more_often_than_twice_a_second(
     flow: Any = hass.config_entries.options
     with pytest.raises(Exception, match="motion_poll_interval"):
         await flow.async_configure(result["flow_id"], {"motion_poll_interval": 0.1})
-
-
-async def test_the_options_refuse_a_lowest_stuck_position_of_fully_open(
-    hass: HomeAssistant, config_entry: MockConfigEntry, loaded: PowerViewRuntime
-) -> None:
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    flow: Any = hass.config_entries.options
-    with pytest.raises(Exception, match="stall_min_position"):
-        await flow.async_configure(result["flow_id"], {"stall_min_position": 100})

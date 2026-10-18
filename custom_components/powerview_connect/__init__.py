@@ -25,11 +25,11 @@ from .entity import (
     shade_device,
     shade_identifier,
 )
-from .runtime import PowerViewConfigEntry, PowerViewRuntime, new_hub, raised_store
+from .runtime import PowerViewConfigEntry, PowerViewRuntime, new_hub
 
 PLATFORMS: list[Platform] = [
-    Platform.BINARY_SENSOR, Platform.BUTTON, Platform.COVER, Platform.SCENE, Platform.SENSOR,
-    Platform.SWITCH,
+    Platform.BINARY_SENSOR, Platform.BUTTON, Platform.COVER, Platform.NUMBER, Platform.SCENE,
+    Platform.SENSOR, Platform.SWITCH,
 ]
 # Home Assistant's own annotations of these two leave types unknown to a strict check: a bare
 # `dict`, and probatio's generic `All`. They are taken by name, with the types they have.
@@ -70,12 +70,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) ->
             translation_key="cannot_connect",
             translation_placeholders={"host": hub.host},
         ) from err
-    raised = raised_store(hass, entry.entry_id)
-    runtime = PowerViewRuntime(hub, entry.unique_id or hub.host, raised)
+    runtime = PowerViewRuntime(hub, entry.unique_id or hub.host)
     entry.runtime_data = runtime
-    for shade_id in await raised.async_load() or []:
-        if shade_id in hub.shades:
-            hub.set_stall_recovery(shade_id, True)
     registry = dr.async_get(hass)
     _register_gateways(registry, entry)
     _remove_stale_devices(registry, entry)
@@ -90,11 +86,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) ->
 async def async_unload_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) -> bool:
     """Unload the entities; Home Assistant cancels the hub's task with the entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-
-async def async_remove_entry(hass: HomeAssistant, entry: PowerViewConfigEntry) -> None:
-    """Forget which shades the removed entry raised when they stopped short."""
-    await raised_store(hass, entry.entry_id).async_remove()
 
 
 async def async_remove_config_entry_device(
@@ -130,7 +121,7 @@ def _register_gateways(registry: dr.DeviceRegistry, entry: PowerViewConfigEntry)
 @callback
 def _follow(hass: HomeAssistant, entry: PowerViewConfigEntry, change: Change) -> None:
     """Keep the devices as the home is: added, changed and removed shades and gateways; and tell
-    automations of a curtain that stopped short of fully open."""
+    automations of a shade whose opening stalled."""
     runtime = entry.runtime_data
     registry = dr.async_get(hass)
     match change:

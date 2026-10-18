@@ -98,25 +98,33 @@ and its history stays. Reconfigure refuses another home's gateway.
 |---|---|---|
 | Read a moving shade every | 1 s | How often a moving shade's position is read. A shade standing still is never read. |
 | Read the whole home every | 10 min | How often every shade is read, in case an event was missed. |
-| Pause between steps | 10 s | How long to wait after each step has stopped, before checking it rose, when a curtain is raised (see below). |
-| Lowest position counted as stuck | 80 % | A curtain that stops below this was stopped on purpose, and is left there. |
 
-**Curtains that stop short of fully open.** A curtain sent fully open sometimes stops a little
-short, as the fabric gathering at the top takes room. Each shade that can be raised has a
-switch under its device's **Configuration**, **Raise if it stops short**, off until you turn it
-on, and kept across restarts. With it on, the curtain is raised the rest of the way in three
-smaller steps, which let the fabric fold, whoever opened it: Home Assistant, the PowerView app,
-a voice assistant or a scene. Only a shade's single cover and the bottom rail of a
-top-down/bottom-up shade (while its top rail is at the top) are raised. Anything else moving or
-stopping the shade meanwhile ends it, and so does turning the switch off; an automation can
-turn it off and on, at night for one.
+**Retry stalled opening.** A pleated or cellular shade (Duette and the like) sent fully open
+sometimes stops a little short: its fabric gathers at the top and the motor meets too much
+resistance. Taken the rest of the way in three small steps, with time between them for the
+fabric to settle, it opens fully. Each such shade has three settings under its device's
+**Configuration**:
 
-Each time it starts and ends, Home Assistant gets the event `powerview_connect_shade_stalled`:
+| Setting | Default | |
+|---|---|---|
+| Retry stalled opening | off | Turn it on for the shades that need it. |
+| Retry stalled opening – delay | 90 s | How long the fabric gets to settle after each step, up to 600 s. |
+| Retry stalled opening – above | 80 % | A stop below this is taken as meant, and the shade is left there. |
+
+It works whoever opened the shade: Home Assistant, the PowerView app, a voice assistant or a
+scene. Only the bottom rail of a top-down/bottom-up shade is retried, and only while its top rail
+is at the top. Anything else moving or stopping the shade meanwhile ends the retry, and so does
+turning the switch off; an automation can turn it off and on. A stop from the PowerView app
+near the top looks like a stalled opening: on a shade you often stop there by hand, leave the
+retry off.
+
+Each time a retry starts and ends, Home Assistant gets the event
+`powerview_connect_shade_stalled`:
 
 | Field | |
 |---|---|
 | `entity_id` | the cover |
-| `outcome` | `recovering` as it starts; then `recovered` (fully open), `gave_up` (a step did not raise it) or `interrupted` (something else moved or stopped it) |
+| `outcome` | `started`; then `opened` (fully open), `gave_up` (a step did not raise it) or `interrupted` (something else moved or stopped it, or the retry was turned off) |
 | `position` | where the cover is, 0-100: where it stopped as it starts, where it ended as it ends |
 
 ## What you get

@@ -16,12 +16,8 @@ from powerview_connect import PowerViewError
 from .const import (
     CONF_MOTION_POLL_INTERVAL,
     CONF_REFRESH_MINUTES,
-    CONF_STALL_MIN_POSITION,
-    CONF_STALL_PAUSE,
     DEFAULT_MOTION_POLL_INTERVAL,
     DEFAULT_REFRESH_MINUTES,
-    DEFAULT_STALL_MIN_POSITION,
-    DEFAULT_STALL_PAUSE,
     DOMAIN,
 )
 from .runtime import PowerViewConfigEntry, new_probe
@@ -180,8 +176,7 @@ class PowerViewConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class PowerViewOptionsFlow(OptionsFlowWithReload):
-    """How often a moving shade and the whole home are read, and how curtains that stop short of
-    fully open are raised; the entry reloads on a change."""
+    """How often a moving shade and the whole home are read; the entry reloads on a change."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Show the options."""
@@ -192,10 +187,6 @@ class PowerViewOptionsFlow(OptionsFlowWithReload):
                 probatio.All(probatio.Coerce(float), probatio.Range(min=0.5, max=10)),
             probatio.Required(CONF_REFRESH_MINUTES, default=DEFAULT_REFRESH_MINUTES):
                 probatio.All(probatio.Coerce(int), probatio.Range(min=1, max=120)),
-            probatio.Required(CONF_STALL_PAUSE, default=DEFAULT_STALL_PAUSE):
-                probatio.All(probatio.Coerce(float), probatio.Range(min=0, max=120)),
-            probatio.Required(CONF_STALL_MIN_POSITION, default=DEFAULT_STALL_MIN_POSITION):
-                probatio.All(probatio.Coerce(int), probatio.Range(min=0, max=99)),
         })
         return self.async_show_form(
             step_id="init",

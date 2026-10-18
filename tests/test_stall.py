@@ -1,5 +1,5 @@
-"""Curtains that stop short of fully open: a switch on each that raises it in steps, kept across
-restarts, and an event for automations."""
+"""Retrying a stalled opening: a switch and two settings on each pleated shade, restored after a
+restart, and an event for automations."""
 
 from __future__ import annotations
 
@@ -7,28 +7,54 @@ import asyncio
 from collections.abc import Sequence
 from typing import Any
 
-from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON, STATE_OFF, STATE_ON
-from homeassistant.core import Event, HomeAssistant
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    STATE_OFF,
+    STATE_ON,
+)
+from homeassistant.core import Event, HomeAssistant, State
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from powerview_connect import Connection, PowerViewHub
+from powerview_connect import Connection, PowerViewHub, StalledOpenRetry
 from powerview_connect.testing import ManualClock, SimulatedGateway
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_capture_events
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_capture_events,
+    mock_restore_cache_with_extra_data,
+)
 
 from custom_components.powerview_connect.const import EVENT_SHADE_STALLED
 from custom_components.powerview_connect.runtime import PowerViewRuntime
 
 from .conftest import BOTTOM_UP, TDBU, P, S, state, tick, until
 
-SWITCH_DOMAIN = "switch"
 PATIO = "cover.living_room_patio_door"
 BOTTOM = "cover.living_room_kitchen_window_bottom"
-PATIO_SWITCH = "switch.living_room_patio_door_raise_if_it_stops_short"
-WINDOW_SWITCH = "switch.living_room_kitchen_window_raise_if_it_stops_short"
+PATIO_SWITCH = "switch.living_room_patio_door_retry_stalled_opening"
+PATIO_DELAY = "number.living_room_patio_door_retry_stalled_opening_delay"
+PATIO_ABOVE = "number.living_room_patio_door_retry_stalled_opening_above"
+WINDOW_SWITCH = "switch.living_room_kitchen_window_retry_stalled_opening"
 
 
 async def _switch(hass: HomeAssistant, entity_id: str, on: bool) -> None:
-    await hass.services.async_call(SWITCH_DOMAIN, SERVICE_TURN_ON if on else SERVICE_TURN_OFF,
+    await hass.services.async_call("switch", SERVICE_TURN_ON if on else SERVICE_TURN_OFF,
                                    {ATTR_ENTITY_ID: entity_id}, blocking=True)
+
+
+async def _number(hass: HomeAssistant, entity_id: str, value: float) -> None:
+    await hass.services.async_call("number", "set_value",
+                                   {ATTR_ENTITY_ID: entity_id, "value": value}, blocking=True)
+
+
+async def _set_up(hass: HomeAssistant, entry: MockConfigEntry) -> PowerViewRuntime:
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    runtime: PowerViewRuntime = entry.runtime_data
+    await until(lambda: runtime.hub.connection is Connection.CONNECTED)
+    return runtime
 
 
 async def _opened_by_the_app(hass: HomeAssistant, gateway: SimulatedGateway,
@@ -49,32 +75,47 @@ async def _steps_succeed(gateway: SimulatedGateway, runtime: PowerViewRuntime, c
             gateway.finish(shade_id)
             await until(lambda: not runtime.hub.shade(shade_id).moving)
             await asyncio.sleep(0.05)
-            await tick(clock, 10.0)
+            await tick(clock, 90.0)
 
 
-async def test_each_cover_that_can_be_raised_has_a_switch_that_is_off(
+async def test_each_pleated_shade_has_the_retry_off_with_its_two_settings(
     hass: HomeAssistant, loaded: PowerViewRuntime
 ) -> None:
-    switches = {found.entity_id: found.state for found in hass.states.async_all(SWITCH_DOMAIN)}
+    switches = {found.entity_id: found.state for found in hass.states.async_all("switch")}
     assert switches == {
         PATIO_SWITCH: STATE_OFF, WINDOW_SWITCH: STATE_OFF,
-        "switch.bedroom_skylight_raise_if_it_stops_short": STATE_OFF,
-        "switch.bedroom_roller_raise_if_it_stops_short": STATE_OFF,
+        "switch.bedroom_skylight_retry_stalled_opening": STATE_OFF,
+        "switch.bedroom_roller_retry_stalled_opening": STATE_OFF,
     }
+    assert (state(hass, PATIO_DELAY).state, state(hass, PATIO_ABOVE).state) == ("90.0", "80.0")
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP) is None
 
 
-async def test_a_curtain_switched_on_that_stops_short_is_raised_and_an_event_says_so(
+async def test_a_shade_with_the_retry_on_whose_opening_stalls_is_opened_and_an_event_says_so(
     hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime, clock: ManualClock
 ) -> None:
     await _switch(hass, PATIO_SWITCH, True)
     assert state(hass, PATIO_SWITCH).state == STATE_ON
-    assert loaded.hub.stall_recovery_enabled(BOTTOM_UP)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP) == StalledOpenRetry(0.8, 3, 90.0)
     events = async_capture_events(hass, EVENT_SHADE_STALLED)
     await _opened_by_the_app(hass, gateway, loaded, BOTTOM_UP, 0.9)
     await until(lambda: len(events) == 1)
-    assert events[0].data == {"entity_id": PATIO, "outcome": "recovering", "position": 90}
+    assert events[0].data == {"entity_id": PATIO, "outcome": "started", "position": 90}
     await _steps_succeed(gateway, loaded, clock, BOTTOM_UP, events)
-    assert events[1].data == {"entity_id": PATIO, "outcome": "recovered", "position": 100}
+    assert events[1].data == {"entity_id": PATIO, "outcome": "opened", "position": 100}
+
+
+async def test_the_settings_of_a_shade_go_to_the_hub(
+    hass: HomeAssistant, loaded: PowerViewRuntime
+) -> None:
+    await _number(hass, PATIO_DELAY, 45)
+    await _number(hass, PATIO_ABOVE, 70)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP) is None
+    await _switch(hass, PATIO_SWITCH, True)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP) == StalledOpenRetry(0.7, 3, 45.0)
+    await _number(hass, PATIO_DELAY, 120)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP) == StalledOpenRetry(0.7, 3, 120.0)
+    assert state(hass, PATIO_DELAY).state == "120.0"
 
 
 async def test_the_event_names_the_bottom_rail_of_a_top_down_bottom_up_shade(
@@ -86,10 +127,10 @@ async def test_the_event_names_the_bottom_rail_of_a_top_down_bottom_up_shade(
     events = async_capture_events(hass, EVENT_SHADE_STALLED)
     await _opened_by_the_app(hass, gateway, loaded, TDBU, 0.85)
     await until(lambda: len(events) == 1)
-    assert events[0].data == {"entity_id": BOTTOM, "outcome": "recovering", "position": 85}
+    assert events[0].data == {"entity_id": BOTTOM, "outcome": "started", "position": 85}
 
 
-async def test_switching_off_during_a_raise_ends_it(
+async def test_switching_the_retry_off_during_one_ends_it(
     hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime
 ) -> None:
     await _switch(hass, PATIO_SWITCH, True)
@@ -99,10 +140,10 @@ async def test_switching_off_during_a_raise_ends_it(
     await _switch(hass, PATIO_SWITCH, False)
     await until(lambda: len(events) == 2)
     assert events[1].data["outcome"] == "interrupted"
-    assert not loaded.hub.stall_recovery_enabled(BOTTOM_UP)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP) is None
 
 
-async def test_a_curtain_not_switched_on_that_stops_short_is_left_there(
+async def test_a_shade_with_the_retry_off_whose_opening_stalls_is_left_there(
     hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime
 ) -> None:
     events = async_capture_events(hass, EVENT_SHADE_STALLED)
@@ -113,38 +154,27 @@ async def test_a_curtain_not_switched_on_that_stops_short_is_left_there(
     assert len([request for request in gateway.requests if request.method == "PUT"]) == 1
 
 
-async def test_a_switch_turned_on_is_on_again_after_a_restart_and_forgotten_with_the_entry(
+async def test_the_switch_and_settings_are_restored_after_a_restart(
     hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway,
-    hass_storage: dict[str, Any],
 ) -> None:
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    await _switch(hass, PATIO_SWITCH, True)
-    await _switch(hass, WINDOW_SWITCH, True)
-    await _switch(hass, WINDOW_SWITCH, False)
-    assert await hass.config_entries.async_reload(config_entry.entry_id)
-    await hass.async_block_till_done()
-    runtime: PowerViewRuntime = config_entry.runtime_data
-    await until(lambda: runtime.hub.connection is Connection.CONNECTED)
-    assert runtime.hub.stall_recovery_enabled(BOTTOM_UP)
-    assert not runtime.hub.stall_recovery_enabled(TDBU)
+    # One cache holds both: a second call would replace the first.
+    mock_restore_cache_with_extra_data(hass, [
+        (State(PATIO_SWITCH, STATE_ON), {}),
+        (State(PATIO_DELAY, "120"), {"native_value": 120.0, "native_unit_of_measurement": "s",
+                                     "native_min_value": 0, "native_max_value": 600,
+                                     "native_step": 1}),
+    ])
+    runtime = await _set_up(hass, config_entry)
+    assert runtime.hub.stalled_open_retry(BOTTOM_UP) == StalledOpenRetry(0.8, 3, 120.0)
+    assert runtime.hub.stalled_open_retry(TDBU) is None
     assert state(hass, PATIO_SWITCH).state == STATE_ON
-    key = f"powerview_connect.{config_entry.entry_id}.raised"
-    assert hass_storage[key]["data"] == [BOTTOM_UP]
-    assert await hass.config_entries.async_remove(config_entry.entry_id)
-    assert key not in hass_storage
-
-
-async def test_a_shade_kept_as_raised_that_the_home_no_longer_has_is_left_out(
-    hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway,
-    hass_storage: dict[str, Any],
-) -> None:
-    hass_storage[f"powerview_connect.{config_entry.entry_id}.raised"] = {
-        "version": 1, "minor_version": 1, "key": "raised", "data": [BOTTOM_UP, 999]}
-    config_entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(config_entry.entry_id)
-    await hass.async_block_till_done()
-    runtime: PowerViewRuntime = config_entry.runtime_data
-    assert runtime.hub.stall_recovery_enabled(BOTTOM_UP)
     await hass.config_entries.async_unload(config_entry.entry_id)
+
+
+async def test_a_disabled_switch_retries_nothing(
+    hass: HomeAssistant, loaded: PowerViewRuntime
+) -> None:
+    await _switch(hass, PATIO_SWITCH, True)
+    er.async_get(hass).async_update_entity(PATIO_SWITCH, disabled_by=er.RegistryEntryDisabler.USER)
+    await hass.async_block_till_done()
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP) is None
