@@ -23,7 +23,6 @@ from .const import (
     CONF_REFRESH_MINUTES,
     DEFAULT_MOTION_POLL_INTERVAL,
     DEFAULT_REFRESH_MINUTES,
-    DEFAULT_RETRY_MIN_OPENNESS,
     DEFAULT_RETRY_DELAY,
     DOMAIN,
 )
@@ -38,8 +37,6 @@ class RetrySettings:
     on: bool = False
     delay: float = DEFAULT_RETRY_DELAY
     """Seconds after each step, for the fabric to settle."""
-    min_openness: float = DEFAULT_RETRY_MIN_OPENNESS
-    """How far open, in percent, a stop must be to count as stalled."""
 
 
 @dataclass(slots=True)
@@ -68,7 +65,7 @@ class PowerViewRuntime:
         if shade_id not in self.hub.shades:
             return
         settings = self.retry(shade_id, role)
-        retry = StalledOpenRetry(min_openness=settings.min_openness / 100, delay=settings.delay)
+        retry = StalledOpenRetry(delay=settings.delay)
         self.hub.set_stalled_open_retry(shade_id, role, retry if settings.on else None)
 
     def via_device_id(self, shade_id: int) -> str:
