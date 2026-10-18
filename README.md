@@ -100,19 +100,16 @@ and its history stays. Reconfigure refuses another home's gateway.
 | Read the whole home every | 10 min | How often every shade is read, in case an event was missed. |
 
 **Retry stalled opening.** A pleated or cellular shade (Duette and the like) sent fully open
-sometimes stops short of the top: its fabric gathers and the motor meets too much resistance.
-Such a motor does not open again from where it stopped, but it does from a little lower down. So
-the shade is lowered by 10 % and, once it has been still for 3 seconds, opened fully again; where
-it stalls again, that is done once more. Each such shade has two settings under its device's
-**Configuration**:
+sometimes does not stay there: its fabric gathers, the motor meets too much resistance and backs
+off, on the way up or once it reached the top. So the shade is lowered by 10 % and, once it has
+been still for 3 seconds, raised to the top in three small steps, with time after each for the
+fabric to settle. Each such shade has three settings under its device's **Configuration**:
 
 | Setting | Default | |
 |---|---|---|
 | Retry stalled opening | off | Turn it on for the shades that need it. |
+| Retry stalled opening – delay | 90 s | How long the fabric gets to settle after each step, up to 600 s. |
 | Retry stalled opening – open at least | 80 % | A stop less open than this is taken as meant, and the shade is left there. |
-
-A shade that reached the top and slides down a little by itself a few seconds later is not
-retried: opening it again would not keep it there.
 
 It works whoever opened the shade: Home Assistant, the PowerView app, a voice assistant or a
 scene. Only the bottom rail of a top-down/bottom-up shade is retried, and only while its top rail
@@ -127,7 +124,7 @@ Each time a retry starts and ends, Home Assistant gets the event
 | Field | |
 |---|---|
 | `entity_id` | the cover |
-| `outcome` | `started`; then `opened` (fully open), `gave_up` (it stalled again each time, or a move did not end in time) or `interrupted` (something else moved or stopped it, or the retry was turned off) |
+| `outcome` | `started`; then `opened` (fully open), `gave_up` (a step did not raise it) or `interrupted` (something else moved or stopped it, or the retry was turned off) |
 | `position` | where the cover is, 0-100: where it stopped as it starts, where it ended as it ends |
 
 ## What you get

@@ -1,4 +1,4 @@
-"""A switch on each pleated shade's cover that retries its opening when it stalls."""
+"""A switch on each pleated shade's cover that retries its opening in steps when it stalls."""
 
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ class PowerViewRetrySwitch(PowerViewShadeEntity, SwitchEntity, RestoreEntity):  
         self._attr_is_on = self.runtime.retry(self.shade_id, self._role).on
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Lower the shade and open it again when its opening stalls."""
+        """Retry the shade's opening in steps when it stalls."""
         self._set(True)
         self._changed()
 

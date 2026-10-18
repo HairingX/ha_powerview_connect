@@ -41,6 +41,9 @@
       }
     },
     "number": {
+      "retry_stalled_opening_delay": {
+        "default": "mdi:timer-sand"
+      },
       "retry_stalled_opening_min_openness": {
         "default": "mdi:percent"
       }
