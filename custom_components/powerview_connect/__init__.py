@@ -132,7 +132,7 @@ def _follow(hass: HomeAssistant, entry: PowerViewConfigEntry, change: Change) ->
     runtime = entry.runtime_data
     registry = dr.async_get(hass)
     match change:
-        case HomeChanged(_, diff):
+        case HomeChanged(diff=diff):
             if diff.added_gateways or diff.changed_gateways:
                 _register_gateways(registry, entry)
             for shade_id in diff.changed_shades:
@@ -155,7 +155,7 @@ def _follow(hass: HomeAssistant, entry: PowerViewConfigEntry, change: Change) ->
             hass.bus.async_fire(EVENT_SHADE_STALLED, {
                 "entity_id": entity_id, "outcome": STALL_OUTCOMES[outcome],
                 "position": None if openness is None else round(openness * 100)})
-        case GatewayChanged(state) if state.status is not None:
+        case GatewayChanged(state=state) if state.status is not None:
             # A gateway is asked only once the home that lists it has given it a device.
             registry.async_update_device(
                 runtime.device_ids[state.gateway.serial],
