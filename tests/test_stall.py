@@ -23,7 +23,7 @@ from powerview_connect import (
     PowerViewHub,
     StalledOpenRetry,
 )
-from powerview_connect.testing import SimulatedGateway
+from powerview_connect.testing import ManualClock, SimulatedGateway
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     async_capture_events,
@@ -33,7 +33,7 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.powerview_connect.const import EVENT_SHADE_STALLED
 from custom_components.powerview_connect.runtime import PowerViewRuntime
 
-from .conftest import BOTTOM_UP, TDBU, P, S, state, until
+from .conftest import BOTTOM_UP, TDBU, P, S, state, tick, until
 
 PATIO = "cover.living_room_patio_door"
 BOTTOM = "cover.living_room_kitchen_window_bottom"
@@ -71,14 +71,16 @@ async def _opened_by_the_app(hass: HomeAssistant, gateway: SimulatedGateway,
     gateway.finish(shade_id, at={P: at})
 
 
-async def _moves_succeed(gateway: SimulatedGateway, shade_id: int,
+async def _moves_succeed(gateway: SimulatedGateway, clock: ManualClock, shade_id: int,
                          events: Sequence[Event[dict[str, Any]]]) -> None:
-    """End each move the retry sends at its target, until the retry has ended."""
+    """End each move the retry sends at its target, and let the shade stay quiet after it, until
+    the retry has ended."""
     while len(events) < 2:
         await until(lambda: gateway.shades[shade_id].target is not None or len(events) >= 2)
         if gateway.shades[shade_id].target is not None:
             gateway.finish(shade_id)
             await asyncio.sleep(0.05)
+            await tick(clock, 3.5)
 
 
 async def test_each_pleated_shade_has_the_retry_off_with_its_setting(
@@ -95,7 +97,7 @@ async def test_each_pleated_shade_has_the_retry_off_with_its_setting(
 
 
 async def test_a_shade_with_the_retry_on_whose_opening_stalls_is_opened_and_an_event_says_so(
-    hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime
+    hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime, clock: ManualClock
 ) -> None:
     await _switch(hass, PATIO_SWITCH, True)
     assert state(hass, PATIO_SWITCH).state == STATE_ON
@@ -104,7 +106,7 @@ async def test_a_shade_with_the_retry_on_whose_opening_stalls_is_opened_and_an_e
     await _opened_by_the_app(hass, gateway, loaded, BOTTOM_UP, 0.9)
     await until(lambda: len(events) == 1)
     assert events[0].data == {"entity_id": PATIO, "outcome": "started", "position": 90}
-    await _moves_succeed(gateway, BOTTOM_UP, events)
+    await _moves_succeed(gateway, clock, BOTTOM_UP, events)
     assert events[1].data == {"entity_id": PATIO, "outcome": "opened", "position": 100}
 
 

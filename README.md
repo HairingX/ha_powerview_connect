@@ -102,8 +102,8 @@ and its history stays. Reconfigure refuses another home's gateway.
 **Retry stalled opening.** A pleated or cellular shade (Duette and the like) sent fully open
 sometimes stops short of the top: its fabric gathers and the motor meets too much resistance.
 Such a motor does not open again from where it stopped, but it does from a little lower down. So
-the shade is lowered by 10 % and, as soon as it has stopped, opened fully again; where it stalls
-again, that is done once more. Each such shade has two settings under its device's
+the shade is lowered by 10 % and, once it has been still for 3 seconds, opened fully again; where
+it stalls again, that is done once more. Each such shade has two settings under its device's
 **Configuration**:
 
 | Setting | Default | |
@@ -127,7 +127,7 @@ Each time a retry starts and ends, Home Assistant gets the event
 | Field | |
 |---|---|
 | `entity_id` | the cover |
-| `outcome` | `started`; then `opened` (fully open), `gave_up` (it stalled again each time) or `interrupted` (something else moved or stopped it, or the retry was turned off) |
+| `outcome` | `started`; then `opened` (fully open), `gave_up` (it stalled again each time, or a move did not end in time) or `interrupted` (something else moved or stopped it, or the retry was turned off) |
 | `position` | where the cover is, 0-100: where it stopped as it starts, where it ended as it ends |
 
 ## What you get
