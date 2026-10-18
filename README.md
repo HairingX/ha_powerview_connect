@@ -102,15 +102,18 @@ and its history stays. Reconfigure refuses another home's gateway.
 **Retry stalled opening.** A pleated or cellular shade (Duette and the like) sent fully open
 sometimes does not stay there: its fabric gathers, the motor meets too much resistance and backs
 off, on the way up or once it reached the top. Where that happens at 80 % open or above, near the
-end of the opening, the shade is lowered by 10 % and, once it has been still for 3 seconds, raised
-to the top in three small steps, with time after each for the fabric to settle; lower down, it is
-left where it stopped, as that is likely a real fault. Each such shade has two settings under its
+end of the opening, the shade is left for 5½ minutes and then raised to the top in three steps:
+two thirds of the way, five sixths, and all of the way. Where the motor backs off from the first
+step, it is sent again at once, up to five times; after each step that holds, the fabric gets
+time to settle. Where the motor backs off from a later step, it starts over, up to three times.
+Lower down than 80 %, the shade is left where it stopped, as that is likely a real fault. Each
+start, step, back-off and end is logged as a warning. Each such shade has two settings under its
 device's **Configuration**:
 
 | Setting | Default | |
 |---|---|---|
 | Retry stalled opening | off | Turn it on for the shades that need it. |
-| Retry stalled opening – delay | 90 s | How long the fabric gets to settle after each step, up to 600 s. |
+| Retry stalled opening – delay | 300 s | How long the fabric gets to settle after each step that holds, up to 600 s. |
 
 It works whoever opened the shade: Home Assistant, the PowerView app, a voice assistant or a
 scene. Only the bottom rail of a top-down/bottom-up shade is retried, and only while its top rail

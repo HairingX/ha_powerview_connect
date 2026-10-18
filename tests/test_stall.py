@@ -1,4 +1,4 @@
-"""Retrying a stalled opening: a switch and two settings on each pleated shade, restored after a
+"""Retrying a stalled opening: a switch and a delay on each pleated shade, restored after a
 restart, and an event for automations."""
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from pytest_homeassistant_custom_component.common import (
 from custom_components.powerview_connect.const import EVENT_SHADE_STALLED
 from custom_components.powerview_connect.runtime import PowerViewRuntime
 
-from .conftest import BOTTOM_UP, TDBU, P, S, state, tick, until
+from .conftest import BOTTOM_UP, TDBU, P, S, state, until
 
 PATIO = "cover.living_room_patio_door"
 BOTTOM = "cover.living_room_kitchen_window_bottom"
@@ -73,16 +73,16 @@ async def _opened_by_the_app(hass: HomeAssistant, gateway: SimulatedGateway,
 
 async def _steps_succeed(gateway: SimulatedGateway, runtime: PowerViewRuntime, clock: ManualClock,
                          shade_id: int, events: Sequence[Event[dict[str, Any]]]) -> None:
+    """Let the retry's waits pass, ending each of its steps at its target, until it has ended."""
     while len(events) < 2:
-        await until(lambda: gateway.shades[shade_id].target is not None or len(events) >= 2)
         if gateway.shades[shade_id].target is not None:
             gateway.finish(shade_id)
             await until(lambda: not runtime.hub.shade(shade_id).moving)
-            await asyncio.sleep(0.05)
-            await tick(clock, 90.0)
+        await clock.advance(10.0)
+        await asyncio.sleep(0.02)
 
 
-async def test_each_pleated_shade_has_the_retry_off_with_its_two_settings(
+async def test_each_pleated_shade_has_the_retry_off_with_its_delay(
     hass: HomeAssistant, loaded: PowerViewRuntime
 ) -> None:
     switches = {found.entity_id: found.state for found in hass.states.async_all("switch")}
@@ -91,7 +91,7 @@ async def test_each_pleated_shade_has_the_retry_off_with_its_two_settings(
         "switch.bedroom_skylight_retry_stalled_opening": STATE_OFF,
         "switch.bedroom_roller_retry_stalled_opening": STATE_OFF,
     }
-    assert state(hass, PATIO_DELAY).state == "90.0"
+    assert state(hass, PATIO_DELAY).state == "300.0"
     assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
 
 
@@ -100,7 +100,7 @@ async def test_a_shade_with_the_retry_on_whose_opening_stalls_is_opened_and_an_e
 ) -> None:
     await _switch(hass, PATIO_SWITCH, True)
     assert state(hass, PATIO_SWITCH).state == STATE_ON
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(delay=90.0)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(delay=300.0)
     events = async_capture_events(hass, EVENT_SHADE_STALLED)
     await _opened_by_the_app(hass, gateway, loaded, BOTTOM_UP, 0.9)
     await until(lambda: len(events) == 1)
@@ -147,12 +147,14 @@ async def test_switching_the_retry_off_during_one_ends_it(
 
 
 async def test_a_stall_of_a_cover_without_an_entity_fires_no_event(
-    hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime
+    hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime, clock: ManualClock
 ) -> None:
     await _switch(hass, PATIO_SWITCH, True)
     er.async_get(hass).async_remove(PATIO)
     events = async_capture_events(hass, EVENT_SHADE_STALLED)
     await _opened_by_the_app(hass, gateway, loaded, BOTTOM_UP, 0.9)
+    await until(lambda: not loaded.hub.shade(BOTTOM_UP).moving)
+    await clock.advance(331.0)
     await until(lambda: len([found for found in gateway.requests if found.method == "PUT"]) == 2)
     await asyncio.sleep(0.05)
     assert events == []
