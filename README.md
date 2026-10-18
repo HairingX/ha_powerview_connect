@@ -102,10 +102,10 @@ and its history stays. Reconfigure refuses another home's gateway.
 **Retry stalled opening.** A pleated or cellular shade (Duette and the like) sent fully open
 sometimes does not stay there: its fabric gathers, the motor meets too much resistance and backs
 off, on the way up or once it reached the top. Where that happens at 80 % open or above, near the
-end of the opening, the shade is left for 5½ minutes and then raised to the top in three steps:
-two thirds of the way, five sixths, and all of the way. Where the motor backs off from the first
-step, it is sent again at once, up to five times; after each step that holds, the fabric gets
-time to settle. Where the motor backs off from a later step, it starts over, up to three times.
+end of the opening, the shade is lowered to 80 % and then raised to the top in three steps,
+worked out from where the motor backed off to: two thirds of the way from there, five sixths, and
+all of the way. After each step that holds, the fabric gets time to settle. Where the motor backs
+off from a step, it starts over from where it backed off to, up to three times.
 Lower down than 80 %, the shade is left where it stopped, as that is likely a real fault. Each
 start, step, back-off and end is logged as a warning. Each such shade has two settings under its
 device's **Configuration**:

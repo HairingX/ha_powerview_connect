@@ -56,8 +56,8 @@ protocol.
   firmware has its device updated. A gateway's hardware and firmware follow what it reports.
 - **Stalled openings** are the hub's to retry, for the covers given a `StalledOpenRetry`. Each
   `retryable` cover has a configuration switch and a number, the delay, on its shade's device;
-  how far open a stop must be, the wait before each round, and the attempts and rounds are the
-  library's defaults, kept out of Home Assistant while they are being tuned from the log. They keep the cover's `RetrySettings` in the runtime, by its shade's id and its role, give the hub a `StalledOpenRetry` while the switch is on, and are restored after
+  how far open a stop must be, where the cover is lowered to, and the rounds are the library's
+  defaults, kept out of Home Assistant while they are being tuned from the log. They keep the cover's `RetrySettings` in the runtime, by its shade's id and its role, give the hub a `StalledOpenRetry` while the switch is on, and are restored after
   a restart by Home Assistant (`RestoreEntity`, `RestoreNumber`). A switch disabled or removed
   turns the retry off. The integration turns each `ShadeStalled` into the event
   `powerview_connect_shade_stalled`, naming the cover by the entity id the registry has for its
