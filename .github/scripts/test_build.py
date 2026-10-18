@@ -3,6 +3,7 @@
     test_build.py libraries BRANCH          one requirement per library that has BRANCH, pinned
                                             to that branch's current commit
     test_build.py version BASE              the first free BASEb<n>, such as 0.1.0b3
+    test_build.py next-patch VERSION        the patch release after VERSION, such as 1.2.1
     test_build.py manifest FILE VERSION [REQUIREMENT ...]
                                             sets the manifest's version, and replaces each
                                             library's requirement with the one given
@@ -50,6 +51,11 @@ def version(base: str) -> None:
     print(f"{release}b{number}")
 
 
+def next_patch(released: str) -> None:
+    release = Version(released)
+    print(f"{release.major}.{release.minor}.{release.micro + 1}")
+
+
 def manifest(path: Path, new_version: str, requirements: list[str]) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     data["version"] = str(Version(new_version))
@@ -65,6 +71,8 @@ if __name__ == "__main__":
             libraries(branch)
         case ["version", base]:
             version(base)
+        case ["next-patch", released]:
+            next_patch(released)
         case ["manifest", path, new_version, *requirements]:
             manifest(Path(path), new_version, requirements)
         case _:
