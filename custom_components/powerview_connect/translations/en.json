@@ -119,6 +119,19 @@
           "wifi": "Wi-Fi"
         }
       }
+    },
+    "switch": {
+      "retry_stalled_opening": {
+        "name": "Retry stalled opening"
+      }
+    },
+    "number": {
+      "retry_stalled_opening_delay": {
+        "name": "Retry stalled opening – delay"
+      },
+      "retry_stalled_opening_min_openness": {
+        "name": "Retry stalled opening – open at least"
+      }
     }
   },
   "exceptions": {

@@ -41,7 +41,11 @@ obvious from the name - one or two lines, no narrative.
 - pyright strict must report 0 errors (`pyright`); the configuration is in `pyproject.toml`.
   The workflow scripts are a project of their own: `pyright -p .github/scripts`.
   No `# type: ignore` and no rule turned off: where Home Assistant's own types force a choice,
-  take the typed route (`_attr_` values rather than overridden properties).
+  take the typed route (`_attr_` values rather than overridden properties). The one exception
+  is two Home Assistant base classes that cannot be combined under a strict check, such as
+  `SwitchEntity` with `RestoreEntity`: then a single
+  `# pyright: ignore[reportIncompatibleVariableOverride]` on the class line, with a comment
+  saying why, rather than a way of our own around Home Assistant's.
 - Every problem found gets a test that fails without the fix.
 - The tests run the real client against the library's simulated gateway
   (`powerview_connect.testing`), an HTTP server on 127.0.0.1 that behaves as a real Gen 3

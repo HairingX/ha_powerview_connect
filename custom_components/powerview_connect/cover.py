@@ -24,7 +24,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from powerview_connect import CoverRole, CoverSpec, Rail
 
 from .const import DOMAIN
-from .entity import Members, PowerViewShadeEntity, set_up_platform
+from .entity import ONE_OF_TWO, Members, PowerViewShadeEntity, cover_unique_id, set_up_platform
 from .runtime import PowerViewConfigEntry, PowerViewRuntime, run_command
 
 PARALLEL_UPDATES = 0
@@ -41,8 +41,6 @@ TILT_FEATURES = (
     | CoverEntityFeature.SET_TILT_POSITION
     | CoverEntityFeature.STOP_TILT
 )
-_ONE_OF_TWO = frozenset({CoverRole.TOP, CoverRole.BOTTOM, CoverRole.FRONT, CoverRole.REAR})
-"""Roles of a shade with two covers: each is named, and its unique id carries the role."""
 
 
 def _covers(runtime: PowerViewRuntime, members: Members) -> Iterable[PowerViewCover]:
@@ -79,10 +77,9 @@ class PowerViewCover(PowerViewShadeEntity, CoverEntity):
         if cover.tilt or cover.rail is None:
             features |= TILT_FEATURES
         self._attr_supported_features = features
-        key = str(cover.role) if cover.role in _ONE_OF_TWO else None
-        self._attr_unique_id = f"{runtime.unique_id}_{shade_id}" + (f"_{key}" if key else "")
-        if key is not None:
-            self._attr_translation_key = key
+        self._attr_unique_id = cover_unique_id(runtime, shade_id, cover.role)
+        if cover.role in ONE_OF_TWO:
+            self._attr_translation_key = str(cover.role)
         else:
             self._attr_name = None
         self._update()
