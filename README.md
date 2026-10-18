@@ -99,6 +99,34 @@ and its history stays. Reconfigure refuses another home's gateway.
 | Read a moving shade every | 1 s | How often a moving shade's position is read. A shade standing still is never read. |
 | Read the whole home every | 10 min | How often every shade is read, in case an event was missed. |
 
+**Retry stalled opening.** A pleated or cellular shade (Duette and the like) sent fully open
+sometimes stops a little short: its fabric gathers at the top and the motor meets too much
+resistance. Taken the rest of the way in three small steps, with time between them for the
+fabric to settle, it opens fully. Each such shade has three settings under its device's
+**Configuration**:
+
+| Setting | Default | |
+|---|---|---|
+| Retry stalled opening | off | Turn it on for the shades that need it. |
+| Retry stalled opening – delay | 90 s | How long the fabric gets to settle after each step, up to 600 s. |
+| Retry stalled opening – open at least | 80 % | A stop less open than this is taken as meant, and the shade is left there. |
+
+It works whoever opened the shade: Home Assistant, the PowerView app, a voice assistant or a
+scene. Only the bottom rail of a top-down/bottom-up shade is retried, and only while its top rail
+is at the top. Anything else moving or stopping the shade meanwhile ends the retry, and so does
+turning the switch off; an automation can turn it off and on. A stop from the PowerView app
+near the top looks like a stalled opening: on a shade you often stop there by hand, leave the
+retry off.
+
+Each time a retry starts and ends, Home Assistant gets the event
+`powerview_connect_shade_stalled`:
+
+| Field | |
+|---|---|
+| `entity_id` | the cover |
+| `outcome` | `started`; then `opened` (fully open), `gave_up` (a step did not raise it) or `interrupted` (something else moved or stopped it, or the retry was turned off) |
+| `position` | where the cover is, 0-100: where it stopped as it starts, where it ended as it ends |
+
 ## What you get
 
 - **The gateway** - a device with its model, firmware, hardware version and serial number, and
@@ -206,6 +234,24 @@ cards:
       data:
         top: 0
         bottom: 0
+```
+
+A notification when a curtain could not be raised all the way:
+
+```yaml
+automation:
+  - alias: "Shades: tell me when a curtain stays stuck"
+    triggers:
+      - trigger: event
+        event_type: powerview_connect_shade_stalled
+        event_data:
+          outcome: gave_up
+    actions:
+      - action: notify.notify
+        data:
+          message: >
+            {{ state_attr(trigger.event.data.entity_id, 'friendly_name') }} stopped at
+            {{ trigger.event.data.position }} %.
 ```
 
 Lower the top rail at sunset, leaving the bottom rail where it is:

@@ -119,6 +119,19 @@
           "wifi": "Wi-Fi"
         }
       }
+    },
+    "switch": {
+      "retry_stalled_opening": {
+        "name": "Prøv igen ved stop"
+      }
+    },
+    "number": {
+      "retry_stalled_opening_delay": {
+        "name": "Prøv igen ved stop – ventetid"
+      },
+      "retry_stalled_opening_min_openness": {
+        "name": "Prøv igen ved stop – mindst åben"
+      }
     }
   },
   "exceptions": {

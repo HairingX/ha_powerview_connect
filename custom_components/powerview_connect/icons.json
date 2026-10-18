@@ -40,6 +40,14 @@
         }
       }
     },
+    "number": {
+      "retry_stalled_opening_delay": {
+        "default": "mdi:timer-sand"
+      },
+      "retry_stalled_opening_min_openness": {
+        "default": "mdi:percent"
+      }
+    },
     "sensor": {
       "battery_level": {
         "default": "mdi:battery",
@@ -55,6 +63,11 @@
         "state": {
           "wifi": "mdi:wifi"
         }
+      }
+    },
+    "switch": {
+      "retry_stalled_opening": {
+        "default": "mdi:restart"
       }
     }
   },
