@@ -109,7 +109,7 @@ fabric to settle, it opens fully. Each such shade has three settings under its d
 |---|---|---|
 | Retry stalled opening | off | Turn it on for the shades that need it. |
 | Retry stalled opening – delay | 90 s | How long the fabric gets to settle after each step, up to 600 s. |
-| Retry stalled opening – above | 80 % | A stop below this is taken as meant, and the shade is left there. |
+| Retry stalled opening – open at least | 80 % | A stop less open than this is taken as meant, and the shade is left there. |
 
 It works whoever opened the shade: Home Assistant, the PowerView app, a voice assistant or a
 scene. Only the bottom rail of a top-down/bottom-up shade is retried, and only while its top rail

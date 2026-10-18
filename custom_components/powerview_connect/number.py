@@ -1,5 +1,5 @@
-"""The settings of each pleated shade's cover for retrying a stalled opening: the delay and the
-threshold."""
+"""The settings of each pleated shade's cover for retrying a stalled opening: the delay and how far
+open a stop must be."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ PARALLEL_UPDATES = 0
 def _numbers(runtime: PowerViewRuntime, members: Members) -> Iterable[PowerViewRetryNumber]:
     for shade_id, role, cover_id in retryable(runtime, members):
         yield PowerViewRetryDelay(runtime, shade_id, role, cover_id)
-        yield PowerViewRetryAbove(runtime, shade_id, role, cover_id)
+        yield PowerViewRetryMinOpenness(runtime, shade_id, role, cover_id)
 
 
 async def async_setup_entry(
@@ -90,17 +90,17 @@ class PowerViewRetryDelay(PowerViewRetryNumber):
         settings.delay = value
 
 
-class PowerViewRetryAbove(PowerViewRetryNumber):
-    """The lowest position at which a stop of an opening counts as stalled."""
+class PowerViewRetryMinOpenness(PowerViewRetryNumber):
+    """How far open, in percent, an opening that stops must be to count as stalled."""
 
-    _key = "above"
+    _key = "min_openness"
     _attr_native_min_value = 0
     _attr_native_max_value = 99
     _attr_native_step = 1
     _attr_native_unit_of_measurement = PERCENTAGE
 
     def _value(self, settings: RetrySettings) -> float:
-        return settings.above
+        return settings.min_openness
 
     def _store(self, settings: RetrySettings, value: float) -> None:
-        settings.above = value
+        settings.min_openness = value

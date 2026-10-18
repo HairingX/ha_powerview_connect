@@ -39,7 +39,7 @@ PATIO = "cover.living_room_patio_door"
 BOTTOM = "cover.living_room_kitchen_window_bottom"
 PATIO_SWITCH = "switch.living_room_patio_door_retry_stalled_opening"
 PATIO_DELAY = "number.living_room_patio_door_retry_stalled_opening_delay"
-PATIO_ABOVE = "number.living_room_patio_door_retry_stalled_opening_above"
+PATIO_OPEN_AT_LEAST = "number.living_room_patio_door_retry_stalled_opening_open_at_least"
 WINDOW_SWITCH = "switch.living_room_kitchen_window_retry_stalled_opening"
 
 
@@ -92,7 +92,7 @@ async def test_each_pleated_shade_has_the_retry_off_with_its_two_settings(
         "switch.bedroom_skylight_retry_stalled_opening": STATE_OFF,
         "switch.bedroom_roller_retry_stalled_opening": STATE_OFF,
     }
-    assert (state(hass, PATIO_DELAY).state, state(hass, PATIO_ABOVE).state) == ("90.0", "80.0")
+    assert (state(hass, PATIO_DELAY).state, state(hass, PATIO_OPEN_AT_LEAST).state) == ("90.0", "80.0")
     assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
 
 
@@ -114,7 +114,7 @@ async def test_the_settings_of_a_shade_go_to_the_hub(
     hass: HomeAssistant, loaded: PowerViewRuntime
 ) -> None:
     await _number(hass, PATIO_DELAY, 45)
-    await _number(hass, PATIO_ABOVE, 70)
+    await _number(hass, PATIO_OPEN_AT_LEAST, 70)
     assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
     await _switch(hass, PATIO_SWITCH, True)
     assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(min_openness=0.7, steps=3, delay=45.0)

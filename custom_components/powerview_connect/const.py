@@ -14,8 +14,8 @@ DEFAULT_REFRESH_MINUTES: Final = 10
 
 DEFAULT_RETRY_DELAY: Final = 90.0
 """Seconds to let the fabric settle after each step that retries a stalled opening."""
-DEFAULT_RETRY_ABOVE: Final = 80.0
-"""The lowest position, in percent, at which an opening that stops counts as stalled."""
+DEFAULT_RETRY_MIN_OPENNESS: Final = 80.0
+"""How far open, in percent, an opening that stops must be to count as stalled."""
 
 EVENT_SHADE_STALLED: Final = f"{DOMAIN}_shade_stalled"
 

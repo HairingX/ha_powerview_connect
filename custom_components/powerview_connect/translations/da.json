@@ -129,8 +129,8 @@
       "retry_stalled_opening_delay": {
         "name": "Prøv igen ved stop – ventetid"
       },
-      "retry_stalled_opening_above": {
-        "name": "Prøv igen ved stop – over"
+      "retry_stalled_opening_min_openness": {
+        "name": "Prøv igen ved stop – mindst åben"
       }
     }
   },

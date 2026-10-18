@@ -44,8 +44,8 @@
       "retry_stalled_opening_delay": {
         "default": "mdi:timer-sand"
       },
-      "retry_stalled_opening_above": {
-        "default": "mdi:arrow-collapse-up"
+      "retry_stalled_opening_min_openness": {
+        "default": "mdi:percent"
       }
     },
     "sensor": {
