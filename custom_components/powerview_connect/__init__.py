@@ -17,7 +17,14 @@ from homeassistant.helpers import service
 from homeassistant.helpers.typing import ConfigType
 from powerview_connect import Change, GatewayChanged, HomeChanged, PowerViewError, ShadeStalled
 
-from .const import ATTR_BOTTOM, ATTR_TOP, DOMAIN, EVENT_SHADE_STALLED, SERVICE_SET_POSITIONS
+from .const import (
+    ATTR_BOTTOM,
+    ATTR_TOP,
+    DOMAIN,
+    EVENT_SHADE_STALLED,
+    SERVICE_SET_POSITIONS,
+    STALL_OUTCOMES,
+)
 from .entity import (
     cover_unique_id,
     gateway_device,
@@ -141,11 +148,12 @@ def _follow(hass: HomeAssistant, entry: PowerViewConfigEntry, change: Change) ->
             if diff.removed_shades or diff.removed_gateways or diff.removed_scenes:
                 _remove_stale_devices(registry, entry)
                 _remove_scenes(hass, entry, diff.removed_scenes)
-        case ShadeStalled(shade_id, role, openness, outcome):
+        case ShadeStalled(shade_id=shade_id, role=role, openness=openness,
+                          outcome=outcome) if outcome in STALL_OUTCOMES:
             entity_id = er.async_get(hass).async_get_entity_id(
                 COVER_DOMAIN, DOMAIN, cover_unique_id(runtime, shade_id, role))
             hass.bus.async_fire(EVENT_SHADE_STALLED, {
-                "entity_id": entity_id, "outcome": str(outcome),
+                "entity_id": entity_id, "outcome": STALL_OUTCOMES[outcome],
                 "position": None if openness is None else round(openness * 100)})
         case GatewayChanged(state) if state.status is not None:
             # A gateway is asked only once the home that lists it has given it a device.

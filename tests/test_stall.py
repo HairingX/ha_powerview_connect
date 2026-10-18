@@ -7,6 +7,7 @@ import asyncio
 from collections.abc import Sequence
 from typing import Any
 
+import pytest
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     SERVICE_TURN_OFF,
@@ -17,7 +18,13 @@ from homeassistant.const import (
 from homeassistant.core import Event, HomeAssistant, State
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from powerview_connect import Connection, PowerViewHub, StalledOpenRetry
+from powerview_connect import (
+    Connection,
+    CoverRole,
+    PowerViewHub,
+    RetryOutcome,
+    StalledOpenRetry,
+)
 from powerview_connect.testing import ManualClock, SimulatedGateway
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -25,7 +32,7 @@ from pytest_homeassistant_custom_component.common import (
     mock_restore_cache_with_extra_data,
 )
 
-from custom_components.powerview_connect.const import EVENT_SHADE_STALLED
+from custom_components.powerview_connect.const import EVENT_SHADE_STALLED, STALL_OUTCOMES
 from custom_components.powerview_connect.runtime import PowerViewRuntime
 
 from .conftest import BOTTOM_UP, TDBU, P, S, state, tick, until
@@ -88,7 +95,7 @@ async def test_each_pleated_shade_has_the_retry_off_with_its_two_settings(
         "switch.bedroom_roller_retry_stalled_opening": STATE_OFF,
     }
     assert (state(hass, PATIO_DELAY).state, state(hass, PATIO_ABOVE).state) == ("90.0", "80.0")
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP) is None
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
 
 
 async def test_a_shade_with_the_retry_on_whose_opening_stalls_is_opened_and_an_event_says_so(
@@ -96,7 +103,7 @@ async def test_a_shade_with_the_retry_on_whose_opening_stalls_is_opened_and_an_e
 ) -> None:
     await _switch(hass, PATIO_SWITCH, True)
     assert state(hass, PATIO_SWITCH).state == STATE_ON
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP) == StalledOpenRetry(0.8, 3, 90.0)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(min_openness=0.8, steps=3, delay=90.0)
     events = async_capture_events(hass, EVENT_SHADE_STALLED)
     await _opened_by_the_app(hass, gateway, loaded, BOTTOM_UP, 0.9)
     await until(lambda: len(events) == 1)
@@ -110,11 +117,11 @@ async def test_the_settings_of_a_shade_go_to_the_hub(
 ) -> None:
     await _number(hass, PATIO_DELAY, 45)
     await _number(hass, PATIO_ABOVE, 70)
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP) is None
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
     await _switch(hass, PATIO_SWITCH, True)
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP) == StalledOpenRetry(0.7, 3, 45.0)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(min_openness=0.7, steps=3, delay=45.0)
     await _number(hass, PATIO_DELAY, 120)
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP) == StalledOpenRetry(0.7, 3, 120.0)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(min_openness=0.7, steps=3, delay=120.0)
     assert state(hass, PATIO_DELAY).state == "120.0"
 
 
@@ -140,7 +147,22 @@ async def test_switching_the_retry_off_during_one_ends_it(
     await _switch(hass, PATIO_SWITCH, False)
     await until(lambda: len(events) == 2)
     assert events[1].data["outcome"] == "interrupted"
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP) is None
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
+
+
+async def test_an_outcome_the_integration_has_no_word_for_fires_no_event(
+    hass: HomeAssistant, gateway: SimulatedGateway, loaded: PowerViewRuntime,
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    monkeypatch.delitem(STALL_OUTCOMES, RetryOutcome.STARTED)
+    await _switch(hass, PATIO_SWITCH, True)
+    events = async_capture_events(hass, EVENT_SHADE_STALLED)
+    await _opened_by_the_app(hass, gateway, loaded, BOTTOM_UP, 0.9)
+    await until(lambda: len([found for found in gateway.requests if found.method == "PUT"]) == 2)
+    await _switch(hass, PATIO_SWITCH, False)
+    await until(lambda: len(events) == 1)
+    assert events[0].data["outcome"] == "interrupted"
+    assert "listener failed" not in caplog.text
 
 
 async def test_a_shade_with_the_retry_off_whose_opening_stalls_is_left_there(
@@ -165,8 +187,8 @@ async def test_the_switch_and_settings_are_restored_after_a_restart(
                                      "native_step": 1}),
     ])
     runtime = await _set_up(hass, config_entry)
-    assert runtime.hub.stalled_open_retry(BOTTOM_UP) == StalledOpenRetry(0.8, 3, 120.0)
-    assert runtime.hub.stalled_open_retry(TDBU) is None
+    assert runtime.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(min_openness=0.8, steps=3, delay=120.0)
+    assert runtime.hub.stalled_open_retry(TDBU, CoverRole.BOTTOM) is None
     assert state(hass, PATIO_SWITCH).state == STATE_ON
     await hass.config_entries.async_unload(config_entry.entry_id)
 
@@ -177,4 +199,4 @@ async def test_a_disabled_switch_retries_nothing(
     await _switch(hass, PATIO_SWITCH, True)
     er.async_get(hass).async_update_entity(PATIO_SWITCH, disabled_by=er.RegistryEntryDisabler.USER)
     await hass.async_block_till_done()
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP) is None
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None

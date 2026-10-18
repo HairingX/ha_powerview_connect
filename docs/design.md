@@ -54,14 +54,16 @@ protocol.
   without a reload; one removed, once the hub has missed it in two reads in a row, has its
   device or scene removed; a shade renamed, moved to another room or gateway, or with new
   firmware has its device updated. A gateway's hardware and firmware follow what it reports.
-- **Stalled openings** are the hub's to retry, for the shades given a `StalledOpenRetry`. Each
-  shade with a `retryable` cover has a configuration switch and two numbers, the delay and the
-  threshold; they keep the shade's `RetrySettings` in the runtime, give the hub a
-  `StalledOpenRetry` while the switch is on, and are restored after a restart by Home
-  Assistant (`RestoreEntity`, `RestoreNumber`). A switch disabled or removed turns the retry off.
-  The integration turns each `ShadeStalled` into the event `powerview_connect_shade_stalled`,
-  naming the cover by the entity id the registry has for its unique id, so automations can tell
-  the user.
+- **Stalled openings** are the hub's to retry, for the covers given a `StalledOpenRetry`. Each
+  `retryable` cover has a configuration switch and two numbers, the delay and the threshold,
+  on its shade's device; they keep the cover's `RetrySettings` in the runtime, by its shade's id
+  and its role, give the hub a `StalledOpenRetry` while the switch is on, and are restored after
+  a restart by Home Assistant (`RestoreEntity`, `RestoreNumber`). A switch disabled or removed
+  turns the retry off. The integration turns each `ShadeStalled` into the event
+  `powerview_connect_shade_stalled`, naming the cover by the entity id the registry has for its
+  unique id, so automations can tell the user. The event's `outcome` is the integration's own
+  word for each outcome, not the library's value, so the event changes only when the
+  integration changes it: an outcome it has no word for fires no event.
 - **Time**: the hub keeps time by `runtime.new_clock`, the event loop's own. The tests replace
   it with the library's `ManualClock`, so time passes only when a test advances it.
 

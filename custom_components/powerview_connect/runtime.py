@@ -9,7 +9,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from powerview_connect import Clock, PowerViewError, PowerViewHub, StalledOpenRetry, Timing
+from powerview_connect import (
+    Clock,
+    CoverRole,
+    PowerViewError,
+    PowerViewHub,
+    StalledOpenRetry,
+    Timing,
+)
 
 from .const import (
     CONF_MOTION_POLL_INTERVAL,
@@ -26,7 +33,7 @@ type PowerViewConfigEntry = ConfigEntry[PowerViewRuntime]
 
 @dataclass(slots=True)
 class RetrySettings:
-    """A shade's settings for retrying an opening that stalls, as its entities hold them."""
+    """A cover's settings for retrying an opening that stalls, as its entities hold them."""
 
     on: bool = False
     delay: float = DEFAULT_RETRY_DELAY
@@ -48,17 +55,17 @@ class PowerViewRuntime:
     """The device id of the gateway the hub reaches."""
     unique_ids: set[str] = field(default_factory=lambda: set())
     """The unique id of every entity the entry has made, disabled ones included."""
-    retries: dict[int, RetrySettings] = field(default_factory=lambda: {})
-    """Each shade's settings for retrying a stalled opening."""
+    retries: dict[tuple[int, CoverRole], RetrySettings] = field(default_factory=lambda: {})
+    """Each cover's settings for retrying a stalled opening, by its shade's id and its role."""
 
-    def retry(self, shade_id: int) -> RetrySettings:
-        """A shade's settings for retrying a stalled opening, the defaults until set."""
-        return self.retries.setdefault(shade_id, RetrySettings())
+    def retry(self, shade_id: int, role: CoverRole) -> RetrySettings:
+        """A cover's settings for retrying a stalled opening, the defaults until set."""
+        return self.retries.setdefault((shade_id, role), RetrySettings())
 
-    def apply_retry(self, shade_id: int) -> None:
-        """Give the hub the shade's settings for retrying a stalled opening, or none while off."""
-        settings = self.retry(shade_id)
-        self.hub.set_stalled_open_retry(shade_id, StalledOpenRetry(
+    def apply_retry(self, shade_id: int, role: CoverRole) -> None:
+        """Give the hub the cover's settings for retrying a stalled opening, or none while off."""
+        settings = self.retry(shade_id, role)
+        self.hub.set_stalled_open_retry(shade_id, role, StalledOpenRetry(
             min_openness=settings.above / 100, delay=settings.delay) if settings.on else None)
 
     def via_device_id(self, shade_id: int) -> str:
