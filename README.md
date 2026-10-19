@@ -102,19 +102,17 @@ and its history stays. Reconfigure refuses another home's gateway.
 **Retry stalled opening.** A pleated or cellular shade (Duette and the like) sent fully open
 sometimes does not stay there: its fabric gathers, the motor meets too much resistance and backs
 off, on the way up or once it reached the top. Where that happens at 80 % open or above, near the
-end of the opening, the shade is lowered four times as far as the motor backed off, and a little
-more (from the top, a shade that backed off 5 % is lowered to 78 %), and then raised to the top
-in three steps, worked out from where the motor backed off to: two thirds of the way from there,
-five sixths, and all of the way. After each step that holds, the fabric gets time to settle.
-Where the motor backs off from a step, it starts over from where it backed off to, up to three
-times. Lower down than 80 %, the shade is left where it stopped, as that is likely a real fault.
-Each start, step, back-off and end is logged as a warning. Each such shade has two settings under its
+end of the opening, the shade is opened again once it has been still for the delay, in up to
+three attempts: fully open; to 98 %, held there for the delay for the fabric to fold, then fully
+open; and fully open again. An attempt the motor refuses, moving the shade up 1 % or less, does
+not count and is made again. Lower down than 80 %, the shade is left where it stopped, as that is
+likely a real fault. Each attempt, move, refusal, back-off and end is logged as a warning. Each such shade has two settings under its
 device's **Configuration**:
 
 | Setting | Default | |
 |---|---|---|
 | Retry stalled opening | off | Turn it on for the shades that need it. |
-| Retry stalled opening – delay | 300 s | How long the fabric gets to settle after each step that holds, up to 600 s. |
+| Retry stalled opening – delay | 300 s | How long the shade must be still before each attempt, and how long it is held at 98 %, up to 600 s. |
 
 It works whoever opened the shade: Home Assistant, the PowerView app, a voice assistant or a
 scene. Only the bottom rail of a top-down/bottom-up shade is retried, and only while its top rail

@@ -13,7 +13,7 @@ DEFAULT_REFRESH_MINUTES: Final = 10
 """Minutes between two reads of the whole home, in case an event was missed."""
 
 DEFAULT_RETRY_DELAY: Final = 300.0
-"""Seconds to let the fabric settle after each step that retries a stalled opening."""
+"""Seconds a shade must be still before each attempt of a retry, and is held below the top."""
 
 EVENT_SHADE_STALLED: Final = f"{DOMAIN}_shade_stalled"
 

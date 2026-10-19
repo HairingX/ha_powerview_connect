@@ -1,5 +1,4 @@
-"""The setting of each pleated shade's cover for retrying a stalled opening: the delay after each
-step."""
+"""The setting of each pleated shade's cover for retrying a stalled opening: its delay."""
 
 from __future__ import annotations
 
@@ -33,7 +32,8 @@ async def async_setup_entry(
 
 
 class PowerViewRetryDelay(PowerViewShadeEntity, RestoreNumber):
-    """Seconds after each step of a retry, for the fabric to settle; restored after a restart."""
+    """Seconds a shade must be still before each attempt of a retry, and is held below the top;
+    restored after a restart."""
 
     _attr_entity_category = EntityCategory.CONFIG
     _attr_mode = NumberMode.BOX
