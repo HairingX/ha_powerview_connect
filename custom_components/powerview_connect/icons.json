@@ -40,11 +40,6 @@
         }
       }
     },
-    "number": {
-      "retry_stalled_opening_delay": {
-        "default": "mdi:timer-sand"
-      }
-    },
     "sensor": {
       "battery_level": {
         "default": "mdi:battery",

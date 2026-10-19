@@ -28,7 +28,7 @@ from .entity import (
 from .runtime import PowerViewConfigEntry, PowerViewRuntime, new_hub
 
 PLATFORMS: list[Platform] = [
-    Platform.BINARY_SENSOR, Platform.BUTTON, Platform.COVER, Platform.NUMBER, Platform.SCENE,
+    Platform.BINARY_SENSOR, Platform.BUTTON, Platform.COVER, Platform.SCENE,
     Platform.SENSOR, Platform.SWITCH,
 ]
 # Home Assistant's own annotations of these two leave types unknown to a strict check: a bare

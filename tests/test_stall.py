@@ -1,5 +1,5 @@
-"""Retrying a stalled opening: a switch and a delay on each pleated shade, restored after a
-restart, and an event for automations."""
+"""Retrying a stalled opening: a switch on each pleated shade, restored after a restart, and an
+event for automations."""
 
 from __future__ import annotations
 
@@ -38,18 +38,12 @@ from .conftest import BOTTOM_UP, TDBU, P, S, state, until
 PATIO = "cover.living_room_patio_door"
 BOTTOM = "cover.living_room_kitchen_window_bottom"
 PATIO_SWITCH = "switch.living_room_patio_door_retry_stalled_opening"
-PATIO_DELAY = "number.living_room_patio_door_retry_stalled_opening_delay"
 WINDOW_SWITCH = "switch.living_room_kitchen_window_retry_stalled_opening"
 
 
 async def _switch(hass: HomeAssistant, entity_id: str, on: bool) -> None:
     await hass.services.async_call("switch", SERVICE_TURN_ON if on else SERVICE_TURN_OFF,
                                    {ATTR_ENTITY_ID: entity_id}, blocking=True)
-
-
-async def _number(hass: HomeAssistant, entity_id: str, value: float) -> None:
-    await hass.services.async_call("number", "set_value",
-                                   {ATTR_ENTITY_ID: entity_id, "value": value}, blocking=True)
 
 
 async def _set_up(hass: HomeAssistant, entry: MockConfigEntry) -> PowerViewRuntime:
@@ -82,7 +76,7 @@ async def _steps_succeed(gateway: SimulatedGateway, runtime: PowerViewRuntime, c
         await asyncio.sleep(0.02)
 
 
-async def test_each_pleated_shade_has_the_retry_off_with_its_delay(
+async def test_each_pleated_shade_has_the_retry_off(
     hass: HomeAssistant, loaded: PowerViewRuntime
 ) -> None:
     switches = {found.entity_id: found.state for found in hass.states.async_all("switch")}
@@ -91,7 +85,6 @@ async def test_each_pleated_shade_has_the_retry_off_with_its_delay(
         "switch.bedroom_skylight_retry_stalled_opening": STATE_OFF,
         "switch.bedroom_roller_retry_stalled_opening": STATE_OFF,
     }
-    assert state(hass, PATIO_DELAY).state == "300.0"
     assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
 
 
@@ -100,25 +93,13 @@ async def test_a_shade_with_the_retry_on_whose_opening_stalls_is_opened_and_an_e
 ) -> None:
     await _switch(hass, PATIO_SWITCH, True)
     assert state(hass, PATIO_SWITCH).state == STATE_ON
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(delay=300.0)
+    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry()
     events = async_capture_events(hass, EVENT_SHADE_STALLED)
     await _opened_by_the_app(hass, gateway, loaded, BOTTOM_UP, 0.9)
     await until(lambda: len(events) == 1)
     assert events[0].data == {"entity_id": PATIO, "outcome": "started", "position": 90}
     await _steps_succeed(gateway, loaded, clock, BOTTOM_UP, events)
     assert events[1].data == {"entity_id": PATIO, "outcome": "opened", "position": 100}
-
-
-async def test_the_delay_of_a_shade_goes_to_the_hub(
-    hass: HomeAssistant, loaded: PowerViewRuntime
-) -> None:
-    await _number(hass, PATIO_DELAY, 45)
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) is None
-    await _switch(hass, PATIO_SWITCH, True)
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(delay=45.0)
-    await _number(hass, PATIO_DELAY, 120)
-    assert loaded.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(delay=120.0)
-    assert state(hass, PATIO_DELAY).state == "120.0"
 
 
 async def test_the_event_names_the_bottom_rail_of_a_top_down_bottom_up_shade(
@@ -179,18 +160,12 @@ async def test_a_shade_with_the_retry_off_whose_opening_stalls_is_left_there(
     assert len([request for request in gateway.requests if request.method == "PUT"]) == 1
 
 
-async def test_the_switch_and_settings_are_restored_after_a_restart(
+async def test_the_switch_is_restored_after_a_restart(
     hass: HomeAssistant, config_entry: MockConfigEntry, gateway: SimulatedGateway,
 ) -> None:
-    # One cache holds both: a second call would replace the first.
-    mock_restore_cache_with_extra_data(hass, [
-        (State(PATIO_SWITCH, STATE_ON), {}),
-        (State(PATIO_DELAY, "120"), {"native_value": 120.0, "native_unit_of_measurement": "s",
-                                     "native_min_value": 0, "native_max_value": 600,
-                                     "native_step": 1}),
-    ])
+    mock_restore_cache_with_extra_data(hass, [(State(PATIO_SWITCH, STATE_ON), {})])
     runtime = await _set_up(hass, config_entry)
-    assert runtime.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry(delay=120.0)
+    assert runtime.hub.stalled_open_retry(BOTTOM_UP, CoverRole.SHADE) == StalledOpenRetry()
     assert runtime.hub.stalled_open_retry(TDBU, CoverRole.BOTTOM) is None
     assert state(hass, PATIO_SWITCH).state == STATE_ON
     await hass.config_entries.async_unload(config_entry.entry_id)
