@@ -23,7 +23,6 @@ from .const import (
     CONF_REFRESH_MINUTES,
     DEFAULT_MOTION_POLL_INTERVAL,
     DEFAULT_REFRESH_MINUTES,
-    DEFAULT_RETRY_DELAY,
     DOMAIN,
 )
 
@@ -35,8 +34,6 @@ class RetrySettings:
     """A cover's settings for retrying an opening that stalls, as its entities hold them."""
 
     on: bool = False
-    delay: float = DEFAULT_RETRY_DELAY
-    """Seconds the shade must be still before each attempt, and is held below the top."""
 
 
 @dataclass(slots=True)
@@ -64,9 +61,8 @@ class PowerViewRuntime:
         nothing for a shade the hub no longer has."""
         if shade_id not in self.hub.shades:
             return
-        settings = self.retry(shade_id, role)
-        retry = StalledOpenRetry(delay=settings.delay)
-        self.hub.set_stalled_open_retry(shade_id, role, retry if settings.on else None)
+        on = self.retry(shade_id, role).on
+        self.hub.set_stalled_open_retry(shade_id, role, StalledOpenRetry() if on else None)
 
     def via_device_id(self, shade_id: int) -> str:
         """The device id of the gateway that serves a shade."""

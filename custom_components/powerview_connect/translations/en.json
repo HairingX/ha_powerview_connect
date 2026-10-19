@@ -124,11 +124,6 @@
       "retry_stalled_opening": {
         "name": "Retry stalled opening"
       }
-    },
-    "number": {
-      "retry_stalled_opening_delay": {
-        "name": "Retry stalled opening – delay"
-      }
     }
   },
   "exceptions": {

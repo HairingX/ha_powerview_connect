@@ -55,10 +55,12 @@ protocol.
   device or scene removed; a shade renamed, moved to another room or gateway, or with new
   firmware has its device updated. A gateway's hardware and firmware follow what it reports.
 - **Stalled openings** are the hub's to retry, for the covers given a `StalledOpenRetry`. Each
-  `retryable` cover has a configuration switch and a number, the delay, on its shade's device;
-  how far open a stop must be, where the cover is held, and the attempts are the library's
-  defaults, kept out of Home Assistant while they are being tuned from the log. They keep the cover's `RetrySettings` in the runtime, by its shade's id and its role, give the hub a `StalledOpenRetry` while the switch is on, and are restored after
-  a restart by Home Assistant (`RestoreEntity`, `RestoreNumber`). A switch disabled or removed
+  `retryable` cover has a configuration switch on its shade's device, and the retry itself is the
+  library's default: a user is not asked for seconds or percentages, nor to know how the retry
+  works. Should it need to differ between shades, a choice of named ways to retry, each setting
+  what it needs, is the place for it. The switch keeps the cover's `RetrySettings` in the
+  runtime, by its shade's id and its role, gives the hub a `StalledOpenRetry` while it is on, and
+  is restored after a restart by Home Assistant (`RestoreEntity`). A switch disabled or removed
   turns the retry off. The integration turns each `ShadeStalled` into the event
   `powerview_connect_shade_stalled`, naming the cover by the entity id the registry has for its
   unique id, so automations can tell the user; a cover without an entity fires none.
