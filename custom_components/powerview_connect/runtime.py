@@ -36,7 +36,7 @@ class RetrySettings:
 
     on: bool = False
     delay: float = DEFAULT_RETRY_DELAY
-    """Seconds after each step, for the fabric to settle."""
+    """Seconds the shade must be still before each attempt, and is held below the top."""
 
 
 @dataclass(slots=True)
