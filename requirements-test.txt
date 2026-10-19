@@ -6,4 +6,4 @@
 pytest-homeassistant-custom-component==0.13.373
 pyright==1.1.414
 # The integration's requirement, as the manifest pins it.
-powerview_connect==1.4.0rc6
+powerview_connect==1.4.0
